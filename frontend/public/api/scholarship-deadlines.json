@@ -1,0 +1,26 @@
+[
+  {
+    "id": 3001,
+    "title": "교내 성적우수 장학금",
+    "deadline": "2025-10-15",
+    "category": "교내",
+    "provider": "학생처",
+    "url": "https://example.com/internal-merit"
+  },
+  {
+    "id": 3002,
+    "title": "국가근로장학(2차)",
+    "deadline": "2025-11-01",
+    "category": "국가",
+    "provider": "한국장학재단",
+    "url": "https://www.kosaf.go.kr/"
+  },
+  {
+    "id": 3003,
+    "title": "푸른동대 기부장학",
+    "deadline": "2025-11-20",
+    "category": "외부",
+    "provider": "푸른동대 재단",
+    "url": "https://example.com/donation"
+  }
+]

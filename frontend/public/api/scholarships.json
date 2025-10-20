@@ -1,0 +1,32 @@
+[
+  {
+    "id": 201,
+    "title": "교내 성적우수 장학금",
+    "provider": "동국대",
+    "deadline": "2025-10-15",
+    "amount": "최대 200만원/학기",
+    "category": "교내",
+    "content": "직전 학기 평점 3.8 이상, 이수학점 15학점 이상...",
+    "url": "https://www.dongguk.edu/..."
+  },
+  {
+    "id": 202,
+    "title": "국가근로장학(2차)",
+    "provider": "한국장학재단",
+    "deadline": "2025-11-01",
+    "amount": "시간당 12,000원",
+    "category": "국가",
+    "content": "소득분위 기준 충족, 근로 가능 시간 주당 20시간...",
+    "url": "https://www.kosaf.go.kr/..."
+  },
+  {
+    "id": 203,
+    "title": "푸른등대 기부장학금",
+    "provider": "한국장학재단",
+    "deadline": "2025-11-20",
+    "amount": "학기당 150만원",
+    "category": "외부",
+    "content": "경제적 어려움, 학업의지 우수자 우대...",
+    "url": "https://www.kosaf.go.kr/..."
+  }
+]
