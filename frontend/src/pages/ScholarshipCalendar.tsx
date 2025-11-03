@@ -50,12 +50,24 @@ export default function ScholarshipCalendar() {
   const { bookmarks, toggleBookmark } = useBookmark();
   const [all, setAll] = useState<Item[]>([]);
   const [month, setMonth] = useState(() => new Date());
-  const [showCalendar] = useState(true);
+  const [selectedAlertDays, setSelectedAlertDays] = useState<
+    Record<number, number>
+  >({});
+  const [showDropdownFor, setShowDropdownFor] = useState<number | null>(null);
+
+  useEffect(() => {
+    const savedAlerts = localStorage.getItem("alertDays");
+    if (savedAlerts) {
+      setSelectedAlertDays(JSON.parse(savedAlerts));
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/scholarships.json");
+        const res = await fetch("/api/scholarships.json", {
+          cache: "no-store",
+        });
         const list: Item[] = await res.json();
 
         list.forEach((it) => {
@@ -88,10 +100,42 @@ export default function ScholarshipCalendar() {
     return map;
   }, [bookmarkedItems]);
 
+  const calcAlertDate = (deadline: string, daysBefore: number) => {
+    const d = new Date(deadline);
+    d.setDate(d.getDate() - daysBefore);
+    return fmt(d);
+  };
+
+  const handleAlertSelect = (
+    id: number,
+    daysBefore: number,
+    deadline: string
+  ) => {
+    const alertDate = calcAlertDate(deadline, daysBefore);
+    const newData = { ...selectedAlertDays, [id]: daysBefore };
+    setSelectedAlertDays(newData);
+    localStorage.setItem("alertDays", JSON.stringify(newData));
+    alert(
+      `알림일이 ${
+        daysBefore === 0 ? "마감일 당일" : `${daysBefore}일 전`
+      } (${alertDate})로 설정되었습니다.`
+    );
+    setShowDropdownFor(null);
+  };
+
+  const handleCancelAlert = (id: number) => {
+    setSelectedAlertDays((prev) => {
+      const updated = { ...prev };
+      delete updated[id];
+      localStorage.setItem("alertDays", JSON.stringify(updated));
+      return updated;
+    });
+    alert("알림 설정이 취소되었습니다.");
+  };
+
   const monthLabel = `${month.getFullYear()}년 ${String(
     month.getMonth() + 1
   ).padStart(2, "0")}월`;
-
   const thisMonth = month.getMonth();
 
   return (
@@ -107,90 +151,84 @@ export default function ScholarshipCalendar() {
           <img src={logo} alt="DMETA 로고" style={logoStyle} />
         </header>
 
-        {showCalendar && (
-          <div style={calendarCard}>
-            <div style={calHeader}>
-              <button
-                style={navBtn}
-                onClick={() =>
-                  setMonth(
-                    (m) => new Date(m.getFullYear(), m.getMonth() - 1, 1)
-                  )
-                }
-              >
-                ‹
-              </button>
-              <div>{monthLabel}</div>
-              <button
-                style={navBtn}
-                onClick={() =>
-                  setMonth(
-                    (m) => new Date(m.getFullYear(), m.getMonth() + 1, 1)
-                  )
-                }
-              >
-                ›
-              </button>
-            </div>
+        <div style={calendarCard}>
+          <div style={calHeader}>
+            <button
+              style={navBtn}
+              onClick={() =>
+                setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))
+              }
+            >
+              ‹
+            </button>
+            <div>{monthLabel}</div>
+            <button
+              style={navBtn}
+              onClick={() =>
+                setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))
+              }
+            >
+              ›
+            </button>
+          </div>
 
-            <div style={dowRow}>
-              {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
-                <div key={d} style={dowCell}>
-                  {d}
-                </div>
-              ))}
-            </div>
+          <div style={dowRow}>
+            {["일", "월", "화", "수", "목", "금", "토"].map((d) => (
+              <div key={d} style={dowCell}>
+                {d}
+              </div>
+            ))}
+          </div>
 
-            <div style={gridWrap}>
-              {grid.map((d, i) => {
-                const inMonth = d.getMonth() === thisMonth;
-                const key = fmt(d);
-                const items = eventsByDay.get(key) || [];
-                const isToday = sameDay(d, new Date());
-                return (
+          <div style={gridWrap}>
+            {grid.map((d, i) => {
+              const inMonth = d.getMonth() === thisMonth;
+              const key = fmt(d);
+              const items = eventsByDay.get(key) || [];
+              const isToday = sameDay(d, new Date());
+              return (
+                <div
+                  key={i}
+                  style={{
+                    ...cell,
+                    opacity: inMonth ? 1 : 0.35,
+                    border: isToday ? "2px solid #2563eb" : "1px solid #eee",
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>
+                    {d.getDate()}
+                  </div>
                   <div
-                    key={i}
                     style={{
-                      ...cell,
-                      opacity: inMonth ? 1 : 0.35,
-                      border: isToday ? "2px solid #2563eb" : "1px solid #eee",
+                      display: "flex",
+                      gap: 4,
+                      flexWrap: "wrap",
+                      marginTop: 6,
                     }}
                   >
-                    <div style={{ fontSize: 12, fontWeight: 700 }}>
-                      {d.getDate()}
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 4,
-                        flexWrap: "wrap",
-                        marginTop: 6,
-                      }}
-                    >
-                      {items.slice(0, 3).map((it, idx) => (
-                        <span
-                          key={idx}
-                          title={it.title}
-                          style={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: 3,
-                            background: CAT_COLOR[it.category],
-                          }}
-                        />
-                      ))}
-                      {items.length > 3 && (
-                        <span style={{ fontSize: 10, opacity: 0.6 }}>
-                          +{items.length - 3}
-                        </span>
-                      )}
-                    </div>
+                    {items.slice(0, 3).map((it, idx) => (
+                      <span
+                        key={idx}
+                        title={it.title}
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: 3,
+                          background: CAT_COLOR[it.category],
+                        }}
+                      />
+                    ))}
+                    {items.length > 3 && (
+                      <span style={{ fontSize: 10, opacity: 0.6 }}>
+                        +{items.length - 3}
+                      </span>
+                    )}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
 
         <section
           style={{
@@ -206,56 +244,142 @@ export default function ScholarshipCalendar() {
                 북마크된 장학금이 없습니다.
               </div>
             ) : (
-              bookmarkedItems.map((it) => (
-                <div key={it.id} style={itemCardStyle}>
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 10 }}
-                  >
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 4,
-                        background: CAT_COLOR[it.category],
-                      }}
-                    />
-                    <strong style={{ fontSize: 15 }}>{it.title}</strong>
-                  </div>
+              bookmarkedItems.map((it) => {
+                const selectedDays = selectedAlertDays[it.id];
+                const selectedText =
+                  selectedDays !== undefined
+                    ? selectedDays === 0
+                      ? `D-Day (${calcAlertDate(it.deadline, selectedDays)})`
+                      : `D-${selectedDays} (${calcAlertDate(
+                          it.deadline,
+                          selectedDays
+                        )})`
+                    : null;
 
-                  <div style={metaStyle}>
-                    {it.provider ?? "기관"} · {it.category} · 마감{" "}
-                    <b>{it.deadline}</b>
-                  </div>
-
-                  <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                    {it.url && (
-                      <button
+                return (
+                  <div key={it.id} style={itemCardStyle}>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      <span
                         style={{
-                          ...pillBtn,
-                          background: "#fff",
-                          color: "#111827",
-                          border: "1px solid #e5e7eb",
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          background: CAT_COLOR[it.category],
                         }}
-                        onClick={() => window.open(it.url!, "_blank")}
+                      />
+                      <strong style={{ fontSize: 15 }}>{it.title}</strong>
+                    </div>
+
+                    <div style={metaStyle}>
+                      {it.provider ?? "기관"} · {it.category} · 마감{" "}
+                      <b>{it.deadline}</b>
+                    </div>
+
+                    <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                      {it.url && (
+                        <button
+                          style={pillBtn}
+                          onClick={() => window.open(it.url!, "_blank")}
+                        >
+                          공고 보기
+                        </button>
+                      )}
+
+                      <button
+                        style={pillBtn}
+                        onClick={() => toggleBookmark(it.id)}
                       >
-                        공고 보기
+                        북마크 해제
                       </button>
+
+                      <button
+                        style={pillBtn}
+                        onClick={() =>
+                          setShowDropdownFor(
+                            showDropdownFor === it.id ? null : it.id
+                          )
+                        }
+                      >
+                        알림일 추가
+                      </button>
+                    </div>
+
+                    {showDropdownFor === it.id && (
+                      <div style={{ marginTop: 10 }}>
+                        {(() => {
+                          const today = new Date();
+                          const deadlineDate = new Date(it.deadline);
+                          const diffDays = Math.floor(
+                            (deadlineDate.getTime() - today.getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          );
+                          const dayOptions = Array.from(
+                            { length: diffDays },
+                            (_, i) => i + 1
+                          );
+
+                          return (
+                            <>
+                              {dayOptions.map((n) => (
+                                <button
+                                  key={n}
+                                  style={{
+                                    ...pillBtn,
+                                    marginRight: 6,
+                                  }}
+                                  onClick={() =>
+                                    handleAlertSelect(it.id, n, it.deadline)
+                                  }
+                                >
+                                  D-{n}
+                                </button>
+                              ))}
+                              <button
+                                style={pillBtn}
+                                onClick={() =>
+                                  handleAlertSelect(it.id, 0, it.deadline)
+                                }
+                              >
+                                마감일 당일
+                              </button>
+                            </>
+                          );
+                        })()}
+                      </div>
                     )}
 
-                    <button
-                      style={{
-                        ...pillBtn,
-                        background: "#fff",
-                        color: "#111827",
-                        border: "1px solid #e5e7eb",
-                      }}
-                      onClick={() => toggleBookmark(it.id)}
-                    >
-                      북마크 해제
-                    </button>
+                    {selectedText && (
+                      <div
+                        style={{
+                          marginTop: 6,
+                          fontSize: 13,
+                          color: "#374151",
+                          opacity: 0.85,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        설정된 알림일: {selectedText}
+                        <button
+                          style={{
+                            ...pillBtn,
+                            borderColor: "#374151",
+                            color: "#374151",
+                            padding: "3px 8px",
+                            fontSize: 12,
+                          }}
+                          onClick={() => handleCancelAlert(it.id)}
+                        >
+                          취소
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>
@@ -358,9 +482,7 @@ const itemCardStyle: React.CSSProperties = {
   borderRadius: "12px",
   padding: "12px",
   background: "#fff",
-  cursor: "pointer",
-  transition: "transform 0.1s ease, box-shadow 0.1s ease",
-  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+  marginBottom: "1rem",
 };
 
 const metaStyle: React.CSSProperties = {
