@@ -1,0 +1,18 @@
+# 웹 크롤링
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+
+# AWS
+boto3>=1.29.0
+
+# Database
+pymongo>=4.6.0
+
+# 환경변수 관리
+python-dotenv>=1.0.0
+
+# AI/ML - 텍스트 요약
+transformers>=4.30.0
+torch>=2.0.0
+sentencepiece>=0.1.99
+

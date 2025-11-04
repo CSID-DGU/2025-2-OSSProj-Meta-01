@@ -1,0 +1,369 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from bs4 import BeautifulSoup
+import requests
+import json
+import time
+import boto3
+from pymongo import MongoClient
+import os
+import tempfile
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
+
+
+class CrawlTools:
+    def __init__(self, aws_access_key=None, aws_secret_key=None, bucket_name=None, mongo_config=None):
+        """
+        크롤링 도구 초기화
+        
+        Args:
+            aws_access_key: AWS 액세스 키 (None이면 환경변수에서 로드)
+            aws_secret_key: AWS 시크릿 키 (None이면 환경변수에서 로드)
+            bucket_name: S3 버킷 이름 (None이면 환경변수에서 로드)
+            mongo_config: MongoDB 설정 딕셔너리 (None이면 환경변수에서 로드)
+                {
+                    'host': 'localhost',
+                    'port': 27017,
+                    'user': 'admin',
+                    'password': 'admin123',
+                    'database': 'dongguk_db'
+                }
+        """
+        # 환경변수에서 AWS 설정 로드
+        self.aws_access_key = aws_access_key or os.getenv('AWS_ACCESS_KEY_ID')
+        self.aws_secret_key = aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY')
+        self.bucket_name = bucket_name or os.getenv('S3_BUCKET_NAME')
+        aws_region = os.getenv('AWS_REGION', 'ap-northeast-2')
+        
+        # S3 클라이언트 설정
+        self.s3 = boto3.client(
+            's3',
+            aws_access_key_id=self.aws_access_key,
+            aws_secret_access_key=self.aws_secret_key,
+            region_name=aws_region
+        )
+        
+        # MongoDB 설정 (환경변수 또는 파라미터 사용)
+        if mongo_config is None:
+            self.mongo_config = {
+                'host': os.getenv('MONGO_HOST', 'localhost'),
+                'port': int(os.getenv('MONGO_PORT', 27017)),
+                'user': os.getenv('MONGO_USER', 'admin'),
+                'password': os.getenv('MONGO_PASSWORD', 'admin123'),
+                'database': os.getenv('MONGO_DATABASE', 'dongguk_db')
+            }
+        else:
+            self.mongo_config = mongo_config
+        
+        # HTTP 헤더
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+    
+    def crawl_pages(self, max_pages=None):
+        """
+        함수1: 개별 페이지 크롤링 (리스트 반환)
+        
+        Args:
+            max_pages: 크롤링할 최대 페이지 수 (None이면 전체)
+            
+        Returns:
+            list: 게시글 목록
+        """
+        print("=== 함수1: 페이지 목록 크롤링 시작 ===")
+        
+        # 첫 페이지에서 총 페이지 수 확인
+        r = requests.get("https://www.dongguk.edu/article/JANGHAKNOTICE/list", headers=self.headers)
+        soup = BeautifulSoup(r.content, 'html.parser')
+        total_count = int(soup.select_one('.count span').text)
+        total_pages = (total_count + 9) // 10
+        
+        if max_pages:
+            total_pages = min(total_pages, max_pages)
+        
+        print(f"크롤링할 페이지: {total_pages}개")
+        
+        def crawl_single_page(page):
+            url = f"https://www.dongguk.edu/article/JANGHAKNOTICE/list?pageIndex={page}"
+            r = requests.get(url, headers=self.headers, timeout=10)
+            soup = BeautifulSoup(r.content, 'html.parser')
+            board_list = soup.select('.board_list ul li')
+            
+            page_posts = []
+            for li in board_list:
+                if li.select_one('.fix'):
+                    continue
+                
+                onclick = li.select_one('a')['onclick']
+                article_id = onclick.split('(')[1].split(')')[0]
+                title = li.select_one('.tit').text.strip()
+                post_url = f"https://www.dongguk.edu/article/JANGHAKNOTICE/detail/{article_id}"
+                date = li.select('.info span')[0].text.strip()
+                has_file = li.select_one('.file') is not None
+                
+                page_posts.append({
+                    '글번호': article_id,
+                    '제목': title,
+                    'URL': post_url,
+                    '등록일': date,
+                    '첨부파일': has_file
+                })
+            
+            return page_posts
+        
+        all_posts = []
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {executor.submit(crawl_single_page, page): page for page in range(1, total_pages + 1)}
+            for future in as_completed(futures):
+                all_posts.extend(future.result())
+        
+        print(f"완료: {len(all_posts)}개 게시글\n")
+        return all_posts
+    
+    def enrich_articles(self, articles):
+        """
+        함수2: enrichment (상세 페이지 크롤링)
+        
+        Args:
+            articles: 게시글 목록
+            
+        Returns:
+            list: enriched 게시글 목록
+        """
+        print("=== 함수2: 상세 페이지 enrichment 시작 ===")
+        
+        def crawl_detail(article):
+            url = article['URL']
+            r = requests.get(url, headers=self.headers, timeout=10)
+            soup = BeautifulSoup(r.content, 'html.parser')
+            board_view = soup.select_one('.board_view')
+            
+            # 본문 텍스트
+            view_cont = board_view.select_one('.view_cont')
+            content = view_cont.get_text(strip=True) if view_cont else ""
+            
+            # 첨부파일
+            attachments = []
+            view_files = board_view.select('.view_files ul li a')
+            for file_link in view_files:
+                href = file_link.get('href', '')
+                if 'downGO' in href:
+                    # downGO('파일명', '경로', '시스템파일명') 파싱
+                    parts = href.split("'")
+                    if len(parts) >= 6:
+                        file_name = parts[1]
+                        file_path = parts[3]
+                        file_sys_nm = parts[5]
+                        attachments.append({
+                            'filename': file_name,
+                            'download_url': f"https://www.dongguk.edu/cmmn/fileDown.do?filename={file_name}&filepath={file_path}&filerealname={file_sys_nm}"
+                        })
+            
+            # 이미지
+            images = []
+            img_tags = view_cont.select('img') if view_cont else []
+            for img in img_tags:
+                img_src = img.get('src', '')
+                if img_src:
+                    full_url = 'https://www.dongguk.edu' + img_src if img_src.startswith('/') else img_src
+                    images.append(full_url)
+            
+            enriched = {
+                '글번호': article['글번호'],
+                '제목': article['제목'],
+                'URL': article['URL'],
+                '등록일': article['등록일'],
+                'content': content,
+                'attachments': attachments,
+                'images': images,
+                'isImage': len(images) > 0
+            }
+            
+            return enriched
+        
+        enriched_list = []
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(crawl_detail, article): article for article in articles}
+            for future in as_completed(futures):
+                enriched_list.append(future.result())
+        
+        print(f"완료: {len(enriched_list)}개 enrichment\n")
+        return enriched_list
+    
+    def upload_attachments_to_s3(self, enriched_articles):
+        """
+        함수3: 첨부파일 다운로드 및 S3 업로드 (upload_file 방식)
+        
+        Args:
+            enriched_articles: enriched 게시글 목록
+            
+        Returns:
+            list: S3 URL이 추가된 게시글 목록
+        """
+        print("=== 함수3: 첨부파일 S3 업로드 시작 ===")
+        
+        def upload_attachment(article):
+            article_no = article['글번호']
+            s3_urls = []
+            
+            for idx, att in enumerate(article.get('attachments', [])):
+                filename = att['filename']
+                download_url = att['download_url']
+                
+                # 임시 파일로 다운로드
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(filename)[1])
+                response = requests.get(download_url, headers=self.headers, timeout=30)
+                temp_file.write(response.content)
+                temp_file.close()
+                
+                # S3 업로드 (upload_file 사용)
+                s3_key = f"attachments/{article_no}_{filename}"
+                self.s3.upload_file(
+                    Filename=temp_file.name,
+                    Bucket=self.bucket_name,
+                    Key=s3_key,
+                    ExtraArgs={
+                        'ContentType': 'application/octet-stream'
+                    }
+                )
+                
+                # 임시 파일 삭제
+                os.unlink(temp_file.name)
+                
+                s3_url = f"https://{self.bucket_name}.s3.ap-northeast-2.amazonaws.com/{s3_key}"
+                s3_urls.append(s3_url)
+            
+            article['attachment_s3_urls'] = s3_urls
+            return article
+        
+        updated_articles = []
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {executor.submit(upload_attachment, article): article for article in enriched_articles}
+            for future in as_completed(futures):
+                updated_articles.append(future.result())
+        
+        print(f"완료: 첨부파일 S3 업로드\n")
+        return updated_articles
+    
+    def upload_images_to_s3(self, enriched_articles):
+        """
+        함수4: 이미지 다운로드 및 S3 업로드 (upload_file 방식)
+        
+        Args:
+            enriched_articles: enriched 게시글 목록
+            
+        Returns:
+            list: S3 URL이 추가된 게시글 목록
+        """
+        print("=== 함수4: 이미지 S3 업로드 시작 ===")
+        
+        def upload_images(article):
+            article_no = article['글번호']
+            s3_urls = []
+            
+            for idx, img_url in enumerate(article.get('images', [])):
+                # 임시 파일로 다운로드
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
+                response = requests.get(img_url, headers=self.headers, timeout=30)
+                temp_file.write(response.content)
+                temp_file.close()
+                
+                # S3 업로드 (upload_file 사용)
+                s3_key = f"images/{article_no}_{idx}.jpg"
+                self.s3.upload_file(
+                    Filename=temp_file.name,
+                    Bucket=self.bucket_name,
+                    Key=s3_key,
+                    ExtraArgs={
+                        'ContentType': 'image/jpeg'
+                    }
+                )
+                
+                # 임시 파일 삭제
+                os.unlink(temp_file.name)
+                
+                s3_url = f"https://{self.bucket_name}.s3.ap-northeast-2.amazonaws.com/{s3_key}"
+                s3_urls.append(s3_url)
+            
+            article['image_s3_urls'] = s3_urls
+            return article
+        
+        updated_articles = []
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {executor.submit(upload_images, article): article for article in enriched_articles}
+            for future in as_completed(futures):
+                updated_articles.append(future.result())
+        
+        print(f"완료: 이미지 S3 업로드\n")
+        return updated_articles
+    
+    def save_to_mongodb(self, enriched_articles):
+        """
+        함수5: MongoDB 저장
+        
+        Args:
+            enriched_articles: 저장할 게시글 목록
+            
+        Returns:
+            int: 저장된 게시글 수
+        """
+        print("=== 함수5: MongoDB 저장 시작 ===")
+        
+        connection_string = f"mongodb://{self.mongo_config['user']}:{self.mongo_config['password']}@{self.mongo_config['host']}:{self.mongo_config['port']}/"
+        client = MongoClient(connection_string)
+        db = client[self.mongo_config['database']]
+        collection = db['scholarships']
+        
+        # 기존 데이터 삭제
+        collection.delete_many({})
+        
+        # 데이터 삽입
+        if enriched_articles:
+            result = collection.insert_many(enriched_articles)
+            print(f"완료: MongoDB에 {len(result.inserted_ids)}개 저장\n")
+        
+        client.close()
+        return len(enriched_articles)
+    
+    def run_pipeline(self, max_pages=1):
+        """
+        전체 크롤링 파이프라인 실행
+        
+        Args:
+            max_pages: 크롤링할 페이지 수 (None이면 전체)
+            
+        Returns:
+            list: 최종 처리된 게시글 목록
+        """
+        start_time = time.time()
+        print("=" * 60)
+        print("장학금 크롤링 파이프라인 시작")
+        print("=" * 60)
+        print()
+        
+        # 1. 페이지 목록 크롤링
+        articles = self.crawl_pages(max_pages=max_pages)
+        
+        # 2. 상세 페이지 enrichment
+        enriched = self.enrich_articles(articles)
+        
+        # 3. 첨부파일 S3 업로드
+        with_attachments = self.upload_attachments_to_s3(enriched)
+        
+        # 4. 이미지 S3 업로드
+        with_images = self.upload_images_to_s3(with_attachments)
+        
+        # 5. MongoDB 저장
+        saved_count = self.save_to_mongodb(with_images)
+        
+        elapsed = time.time() - start_time
+        
+        print("=" * 60)
+        print(f"파이프라인 완료!")
+        print(f"총 처리: {saved_count}개")
+        print(f"총 소요 시간: {elapsed:.2f}초")
+        print("=" * 60)
+        
+        return with_images
