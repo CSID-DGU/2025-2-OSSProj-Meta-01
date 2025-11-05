@@ -206,13 +206,13 @@ const ProfilePage: React.FC = () => {
                 key={i}
                 onClick={() => handleToggle(kw.name)}
                 style={{
-                  background: kw.active ? "#f7b787" : "#f3f4f6",
+                  background: kw.active ? "#f9a24e" : "#f3f4f6",
                   color: kw.active ? "#fff" : "#9ca3af",
                   borderRadius: 20,
                   padding: "6px 10px",
                   fontSize: 14,
                   fontWeight: 500,
-                  border: kw.active ? "1px solid #F97316" : "1px solid #e5e7eb",
+                  border: kw.active ? "1px solid #f68a0a" : "1px solid #e5e7eb",
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
