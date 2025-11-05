@@ -322,6 +322,15 @@ export default function ScholarshipCalendar() {
 
                           return (
                             <>
+                              <button
+                                style={pillBtn}
+                                onClick={() =>
+                                  handleAlertSelect(it.id, 0, it.deadline)
+                                }
+                              >
+                                D-Day
+                              </button>
+
                               {dayOptions.map((n) => (
                                 <button
                                   key={n}
@@ -336,14 +345,6 @@ export default function ScholarshipCalendar() {
                                   D-{n}
                                 </button>
                               ))}
-                              <button
-                                style={pillBtn}
-                                onClick={() =>
-                                  handleAlertSelect(it.id, 0, it.deadline)
-                                }
-                              >
-                                마감일 당일
-                              </button>
                             </>
                           );
                         })()}
