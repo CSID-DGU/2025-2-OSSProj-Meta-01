@@ -29,6 +29,11 @@ type Certificate = {
   score?: string;
 };
 
+type Keyword = {
+  name: string;
+  active: boolean;
+};
+
 const color = {
   orange: "#f97316",
   text: "#111827",
@@ -56,13 +61,50 @@ const ProfilePage: React.FC = () => {
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [showModal, setShowModal] = useState(false);
 
+  // ✅ 관심 키워드 상태
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [editing, setEditing] = useState(false);
+
   useEffect(() => {
-    const saved = localStorage.getItem("profile");
-    if (saved) setForm(JSON.parse(saved));
+    const adminDefault: Keyword[] = [
+      { name: "교내장학", active: true },
+      { name: "교외장학", active: true },
+      { name: "국가장학", active: true },
+      { name: "등록금지원", active: true },
+      { name: "생활비지원", active: true },
+      { name: "이공계", active: true },
+      { name: "인문계", active: true },
+      { name: "예체능", active: true },
+      { name: "봉사", active: true },
+      { name: "성적우수", active: true },
+      { name: "저소득층", active: true },
+      { name: "기업연계", active: true },
+      { name: "자격증", active: true },
+      { name: "종교", active: true },
+    ];
+
+    const saved = localStorage.getItem("keywords");
+    try {
+      const parsed = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        setKeywords(adminDefault);
+        localStorage.setItem("keywords", JSON.stringify(adminDefault));
+      } else {
+        setKeywords(parsed);
+      }
+    } catch {
+      setKeywords(adminDefault);
+      localStorage.setItem("keywords", JSON.stringify(adminDefault));
+    }
+
+    // ✅ 프로필 및 자격증 로드
+    const savedProfile = localStorage.getItem("profile");
+    if (savedProfile) setForm(JSON.parse(savedProfile));
 
     const savedCerts = localStorage.getItem("certificates");
     if (savedCerts) setCerts(JSON.parse(savedCerts));
 
+    // ✅ 장학 데이터 로드
     (async () => {
       try {
         const res = await fetch("/api/scholarships.json");
@@ -73,6 +115,24 @@ const ProfilePage: React.FC = () => {
       }
     })();
   }, []);
+
+  const handleToggle = (kwName: string) => {
+    if (!editing) return;
+    setKeywords((prev) =>
+      prev.map((k) => (k.name === kwName ? { ...k, active: !k.active } : k))
+    );
+  };
+
+  const handleCancel = () => {
+    const saved = localStorage.getItem("keywords");
+    if (saved) setKeywords(JSON.parse(saved));
+    setEditing(false);
+  };
+
+  const handleSave = () => {
+    localStorage.setItem("keywords", JSON.stringify(keywords));
+    setEditing(false);
+  };
 
   const handleAddCert = (cert: Certificate) => {
     const updated = [...certs, cert];
@@ -92,6 +152,7 @@ const ProfilePage: React.FC = () => {
   return (
     <>
       <div style={wrap}>
+        {/* ===== Header ===== */}
         <header style={headerStyle}>
           <img
             src={arrowIcon}
@@ -102,6 +163,7 @@ const ProfilePage: React.FC = () => {
           <img src={logo} alt="DMETA 로고" style={logoStyle} />
         </header>
 
+        {/* ===== 내 정보 ===== */}
         <section style={card}>
           <h3 style={sectionTitle}>내 정보</h3>
           <div style={formWrap}>
@@ -124,6 +186,72 @@ const ProfilePage: React.FC = () => {
           </div>
         </section>
 
+        {/* ===== 내 관심 키워드 ===== */}
+        <section style={card}>
+          <h3 style={sectionTitle}>내 관심 키워드</h3>
+
+          {/* 키워드 목록 */}
+          <div
+            style={{
+              minHeight: 80,
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 20,
+            }}
+          >
+            {keywords.map((kw, i) => (
+              <div
+                key={i}
+                onClick={() => handleToggle(kw.name)}
+                style={{
+                  background: kw.active ? "#f7b787" : "#f3f4f6",
+                  color: kw.active ? "#fff" : "#9ca3af",
+                  borderRadius: 20,
+                  padding: "6px 10px",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  border: kw.active ? "1px solid #F97316" : "1px solid #e5e7eb",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  cursor: editing ? "pointer" : "default",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                #{kw.name}
+              </div>
+            ))}
+          </div>
+
+          {/* 버튼 그룹 (항상 하단 오른쪽 정렬) */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 10,
+              marginTop: 10,
+            }}
+          >
+            {editing ? (
+              <>
+                <button style={cancelBtn} onClick={handleCancel}>
+                  취소
+                </button>
+                <button style={saveBtn} onClick={handleSave}>
+                  저장
+                </button>
+              </>
+            ) : (
+              <button style={editBtn} onClick={() => setEditing(true)}>
+                편집
+              </button>
+            )}
+          </div>
+        </section>
+
+        {/* ===== 자격증 ===== */}
         <section style={card}>
           <h3 style={sectionTitle}>내 자격증/어학성적</h3>
           <div style={certList}>
@@ -133,7 +261,6 @@ const ProfilePage: React.FC = () => {
               </div>
             ) : (
               certs.map((c, i) => (
-                // @ts-ignore
                 <div key={i} style={certItem}>
                   <strong>{c.name}</strong>
                   <span style={certText}>
@@ -149,12 +276,12 @@ const ProfilePage: React.FC = () => {
           </div>
         </section>
 
+        {/* ===== 북마크 관리 ===== */}
         <section style={card}>
           <div style={sectionTop}>
             <h3 style={sectionTitle}>북마크 관리</h3>
             <span style={badge}>장학금 {schRows.length}건</span>
           </div>
-
           <div style={listWrap}>
             {schRows.length === 0 ? (
               <div style={{ fontSize: 14, color: color.sub }}>
@@ -201,6 +328,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </section>
 
+        {/* ===== 계정 ===== */}
         <section style={card}>
           <h3 style={sectionTitle}>계정</h3>
           <button style={logoutBtn}>회원탈퇴</button>
@@ -217,6 +345,106 @@ const ProfilePage: React.FC = () => {
       )}
     </>
   );
+};
+
+/* ------------------- Sub Components ------------------- */
+const Input: React.FC<{
+  label: string;
+  value: string;
+  placeholder: string;
+}> = ({ label, value, placeholder }) => (
+  <label style={{ display: "grid", gap: 4 }}>
+    <span style={{ fontSize: 12, color: "#6b7280" }}>{label}</span>
+    <input
+      value={value}
+      placeholder={placeholder}
+      readOnly
+      style={{
+        border: "1px solid #e5e7eb",
+        borderRadius: 12,
+        padding: "10px",
+        height: 42,
+        background: "#fff",
+        outline: "none",
+        color: "#111827",
+      }}
+    />
+  </label>
+);
+
+const AddCertModal: React.FC<{
+  onClose: () => void;
+  onSave: (c: Certificate) => void;
+}> = ({ onClose, onSave }) => {
+  const [form, setForm] = useState<Certificate>({
+    name: "",
+    date: "",
+    score: "",
+  });
+
+  return (
+    <div style={modalOverlay}>
+      <div style={modalBox}>
+        <h3 style={modalTitle}>자격증 추가</h3>
+        <hr
+          style={{
+            border: "none",
+            borderTop: "1px solid #e5e7eb",
+            margin: "12px 0 16px 0",
+          }}
+        />
+        <div style={{ display: "grid", gap: 12 }}>
+          <input
+            placeholder="자격증 이름"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            style={modalInput}
+          />
+          <input
+            type="date"
+            value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })}
+            style={modalInput}
+          />
+          <input
+            placeholder="점수 (선택)"
+            value={form.score}
+            onChange={(e) => setForm({ ...form, score: e.target.value })}
+            style={modalInput}
+          />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 10,
+            marginTop: 22,
+          }}
+        >
+          <button style={modalCancel} onClick={onClose}>
+            취소
+          </button>
+          <button
+            style={modalSave}
+            onClick={() => form.name && form.date && onSave(form)}
+          >
+            저장
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ------------------- Styles ------------------- */
+const wrap: React.CSSProperties = {
+  maxWidth: 480,
+  margin: "0 auto",
+  padding: "20px",
+  paddingBottom: "100px",
+  fontFamily: "Pretendard, sans-serif",
+  color: color.text,
+  background: "#fff",
 };
 
 const headerStyle: React.CSSProperties = {
@@ -245,108 +473,6 @@ const logoStyle: React.CSSProperties = {
   objectFit: "contain",
 };
 
-const AddCertModal: React.FC<{
-  onClose: () => void;
-  onSave: (c: Certificate) => void;
-}> = ({ onClose, onSave }) => {
-  const [form, setForm] = useState<Certificate>({
-    name: "",
-    date: "",
-    score: "",
-  });
-
-  return (
-    <div style={modalOverlay}>
-      <div style={modalBox}>
-        <h3 style={modalTitle}>자격증 추가</h3>
-        <hr
-          style={{
-            border: "none",
-            borderTop: "1px solid #e5e7eb",
-            margin: "12px 0 16px 0",
-          }}
-        />
-
-        <div style={{ display: "grid", gap: 12 }}>
-          <input
-            placeholder="자격증 이름"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            style={modalInput}
-          />
-          <input
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-            style={modalInput}
-          />
-          <input
-            placeholder="점수 (선택)"
-            value={form.score}
-            onChange={(e) => setForm({ ...form, score: e.target.value })}
-            style={modalInput}
-          />
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 10,
-            marginTop: 22,
-          }}
-        >
-          <button style={modalCancel} onClick={onClose}>
-            취소
-          </button>
-          <button
-            style={modalSave}
-            onClick={() => {
-              if (form.name && form.date) onSave(form);
-            }}
-          >
-            저장
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const Input: React.FC<{
-  label: string;
-  value: string;
-  placeholder: string;
-}> = ({ label, value, placeholder }) => (
-  <label style={{ display: "grid", gap: 4 }}>
-    <span style={{ fontSize: 12, color: "#6b7280" }}>{label}</span>
-    <input
-      value={value}
-      placeholder={placeholder}
-      readOnly
-      style={{
-        border: "1px solid #e5e7eb",
-        borderRadius: 12,
-        padding: "10px",
-        height: 42,
-        background: "#fff",
-        outline: "none",
-        color: "#111827",
-      }}
-    />
-  </label>
-);
-
-const wrap: React.CSSProperties = {
-  maxWidth: 480,
-  margin: "0 auto",
-  padding: "20px",
-  paddingBottom: "100px",
-  fontFamily: "Pretendard, sans-serif",
-  color: color.text,
-  background: "#fff",
-};
-
 const card = {
   background: "#fff",
   borderRadius: 18,
@@ -369,17 +495,33 @@ const formWrap = {
   gap: 14,
 };
 const editBtn = {
-  padding: "10px 16px",
-  borderRadius: 12,
-  border: `1px solid ${color.orange}`,
+  padding: "8px 16px",
+  borderRadius: 10,
+  border: `1.5px solid ${color.orange}`,
   background: color.orange,
   color: "#fff",
   fontWeight: 600,
   cursor: "pointer",
-  marginTop: 14,
+  fontSize: 14,
 };
+
+const cancelBtn = {
+  padding: "8px 16px",
+  borderRadius: 10,
+  border: `1.5px solid ${color.orange}`,
+  background: "#fff",
+  color: color.orange,
+  fontWeight: 600,
+  cursor: "pointer",
+  fontSize: 14,
+};
+
+const saveBtn = {
+  ...editBtn,
+};
+
 const certList = { display: "grid", gap: 12, marginBottom: 12 };
-const certItem = {
+const certItem: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: 4,
@@ -429,8 +571,6 @@ const logoutBtn = {
   cursor: "pointer",
   color: "#000",
 };
-
-/* ===== Modal Styles ===== */
 const modalOverlay: React.CSSProperties = {
   position: "fixed",
   top: 0,
@@ -458,8 +598,7 @@ const modalTitle: React.CSSProperties = {
   color: "#111827",
   textAlign: "center",
 };
-
-const modalInput: React.CSSProperties = {
+const modalInput = {
   border: "1px solid #e5e7eb",
   borderRadius: 10,
   padding: "10px 12px",
@@ -468,8 +607,7 @@ const modalInput: React.CSSProperties = {
   color: "#111827",
   outline: "none",
 };
-
-const modalCancel: React.CSSProperties = {
+const modalCancel = {
   border: "1px solid #d1d5db",
   background: "#fff",
   borderRadius: 10,
@@ -478,8 +616,7 @@ const modalCancel: React.CSSProperties = {
   fontSize: 14,
   color: "#374151",
 };
-
-const modalSave: React.CSSProperties = {
+const modalSave = {
   border: "none",
   background: color.orange,
   color: "#fff",
