@@ -25,7 +25,6 @@ const ScholarshipList: React.FC = () => {
   const [data, setData] = useState<Scholarship[]>([]);
   const [filtered, setFiltered] = useState<Scholarship[]>([]);
   const [keywords, setKeywords] = useState<Keyword[]>([]);
-  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [showKeywords, setShowKeywords] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -33,7 +32,7 @@ const ScholarshipList: React.FC = () => {
 
   const { bookmarks, toggleBookmark } = useBookmark();
 
-  // ✅ localStorage에서 키워드 불러오기
+  // ✅ localStorage에서 프로필 키워드 불러오기 (기준값)
   useEffect(() => {
     const saved = localStorage.getItem("keywords");
     if (saved) {
@@ -43,11 +42,7 @@ const ScholarshipList: React.FC = () => {
           const normalized = parsed.map((k: any) =>
             typeof k === "string" ? { name: k, active: true } : k
           );
-          setKeywords(normalized);
-          const active = normalized
-            .filter((k: Keyword) => k.active)
-            .map((k: Keyword) => k.name);
-          setSelectedKeywords(active);
+          setKeywords([...normalized]); // 복제본 사용
         }
       } catch {
         setKeywords([]);
@@ -70,31 +65,39 @@ const ScholarshipList: React.FC = () => {
     })();
   }, []);
 
-  // ✅ 키워드 클릭 시 토글 & 필터링 (다중 선택 지원)
+  // ✅ 키워드 클릭 시 온/오프 (localStorage에는 반영 안 됨)
   const handleKeywordClick = (kw: string) => {
-    setSelectedKeywords((prev) => {
-      const isSelected = prev.includes(kw);
-      const updated = isSelected ? prev.filter((k) => k !== kw) : [...prev, kw];
+    setKeywords((prev) => {
+      const updated = prev.map((k) =>
+        k.name === kw ? { ...k, active: !k.active } : k
+      );
 
-      if (updated.length === 0) {
+      // 활성 키워드만 필터링
+      const actives = updated.filter((k) => k.active).map((k) => k.name);
+      if (actives.length === 0) {
         setFiltered(data);
       } else {
         setFiltered(
-          data.filter((s) => {
-            return updated.some((sel) => {
+          data.filter((s) =>
+            actives.some((sel) => {
               if (sel === "교내장학") return s.category === "교내";
               if (sel === "국가장학") return s.category === "국가";
               if (sel === "교외장학") return s.category === "외부";
-              return false;
-            });
-          })
+              return (
+                s.title.includes(sel) ||
+                s.provider.includes(sel) ||
+                (s.amount && s.amount.includes(sel))
+              );
+            })
+          )
         );
       }
+
       return updated;
     });
   };
 
-  const activeKeywords = keywords.filter((k) => k.active);
+  // ✅ 새로고침 시 localStorage 기준으로 복구됨 (useEffect 재실행)
 
   return (
     <>
@@ -112,7 +115,7 @@ const ScholarshipList: React.FC = () => {
 
         <h2 style={title}>전체 장학금 리스트</h2>
 
-        {/* ===== 키워드 토글 버튼 + 전체 키워드 표시 ===== */}
+        {/* ===== 키워드 토글 버튼 ===== */}
         <div style={keywordToggleWrap}>
           <button
             onClick={() => setShowKeywords(!showKeywords)}
@@ -121,38 +124,45 @@ const ScholarshipList: React.FC = () => {
             {showKeywords ? "관심키워드 숨기기 ▲" : "관심키워드 보기 ▼"}
           </button>
 
-          {/* 버튼 옆에 모든 키워드 표시 (펼쳐질 때는 숨김) */}
-          {selectedKeywords.length > 0 && !showKeywords && (
+          {/* 접힘 상태: 활성 키워드만 표시 */}
+          {!showKeywords && keywords.length > 0 && (
             <div style={selectedKeywordsText}>
-              {selectedKeywords.map((kw, i) => (
-                <span key={i}>#{kw} </span>
-              ))}
+              {keywords
+                .filter((kw) => kw.active) // ✅ 활성만 표시
+                .map((kw, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      color: "#374151",
+                      marginRight: 6,
+                      cursor: "pointer",
+                    }}
+                    onClick={() => handleKeywordClick(kw.name)}
+                  >
+                    #{kw.name}
+                  </span>
+                ))}
             </div>
           )}
         </div>
 
-        {/* ===== 키워드 영역 ===== */}
+        {/* ===== 펼친 상태 ===== */}
         {showKeywords && (
           <div style={keywordWrap}>
-            {activeKeywords.map((kw, i) => {
-              const isSelected = selectedKeywords.includes(kw.name);
-              return (
-                <div
-                  key={i}
-                  style={{
-                    ...keywordTag,
-                    background: isSelected ? "#f9a24e" : "#f3f4f6",
-                    color: isSelected ? "#fff" : "#9ca3af",
-                    border: isSelected
-                      ? "1px solid #f68a0a"
-                      : "1px solid #e5e7eb",
-                  }}
-                  onClick={() => handleKeywordClick(kw.name)}
-                >
-                  #{kw.name}
-                </div>
-              );
-            })}
+            {keywords.map((kw, i) => (
+              <div
+                key={i}
+                style={{
+                  ...keywordTag,
+                  background: kw.active ? "#f9a24e" : "#f3f4f6",
+                  color: kw.active ? "#fff" : "#9ca3af",
+                  border: kw.active ? "1px solid #f68a0a" : "1px solid #e5e7eb",
+                }}
+                onClick={() => handleKeywordClick(kw.name)}
+              >
+                #{kw.name}
+              </div>
+            ))}
           </div>
         )}
 
@@ -258,7 +268,7 @@ const title: React.CSSProperties = {
 const keywordToggleWrap: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  flexWrap: "wrap", // ✅ 줄바꿈 가능
+  flexWrap: "wrap",
   gap: 8,
   marginBottom: 10,
 };
@@ -275,21 +285,26 @@ const keywordToggleBtn: React.CSSProperties = {
   transition: "0.2s",
 };
 
+// ✅ 프로필처럼 줄바꿈 유지 + 자연스러운 줄 간격
 const selectedKeywordsText: React.CSSProperties = {
   fontSize: 14,
-  color: "#374151",
-  lineHeight: 1.6,
+  lineHeight: 2,
   flex: 1,
-  wordBreak: "keep-all",
-  whiteSpace: "normal", // ✅ 모든 키워드 줄바꿈 허용
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 6,
+  justifyContent: "flex-start",
+  color: "#374151",
 };
 
+// ✅ 프로필과 동일한 키워드 줄 정렬
 const keywordWrap: React.CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
-  gap: 8,
+  gap: 6,
   marginBottom: 16,
-  transition: "max-height 0.3s ease",
+  justifyContent: "flex-start",
+  alignItems: "flex-start",
 };
 
 const keywordTag: React.CSSProperties = {
