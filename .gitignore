@@ -5,3 +5,22 @@
 .env
 
 /backend/src/crawler/__pycache__/
+
+# Python
+__pycahce__/
+*.pyc
+*.pyo
+*.pyd
+
+# virtual environments
+venv/
+env/
+.venv/
+
+# .VS Code
+.vscode/
+
+# pip cache or build artifacts
+*.egg-info/
+build/
+dist/
