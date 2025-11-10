@@ -38,9 +38,22 @@ class User(models.Model):
     income_level = models.CharField(max_length=10, choices=INCOME_CHOICES, null=True, blank=True)
     receive_notifications = models.BooleanField(default=False)
 
+    USERNAME_FIELD = 'id'
+    REQUIRED_FIELDS = []
+
     class Meta:
         db_table = 'Users'
 
+    is_active = True
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+    
     def save(self, *args, **kwargs):
         
         if not self.password.startswith('pbkdf2_'):
