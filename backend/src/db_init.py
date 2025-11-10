@@ -9,7 +9,7 @@ connection = mysql.connector.connect(
     host=os.getenv('MYSQL_HOST', 'localhost'),
     user=os.getenv('MYSQL_USER'),
     password=os.getenv('MYSQL_PASSWORD'),
-    port=os.getenv('MYSQL_PORT', '3306')
+    port=os.getenv('MYSQL_PORT', '3307')
 )
 
 cursor = connection.cursor()
