@@ -3,7 +3,7 @@ from .views import (
     MyInfoView,
     KeywordListView, MyKeywordListCreateView, MyKeywordDeleteView,
     CertificationListView, MyCertificationListCreateView, MyCertificationDetailView,
-    MyBookmarkListView
+    MyBookmarkListView, MyBookmarkDeleteView
 )
 
 urlpatterns = [
@@ -18,4 +18,5 @@ urlpatterns = [
     path('me/certifications/<int:user_certification_id>/', MyCertificationDetailView.as_view()),
 
     path('me/bookmarks/', MyBookmarkListView.as_view()),
+    path('me/bookmarks/<int:bookmark_id>/', MyBookmarkDeleteView.as_view()),
 ]

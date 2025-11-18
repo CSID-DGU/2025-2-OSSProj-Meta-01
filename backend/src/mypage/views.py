@@ -16,11 +16,16 @@ from .serializers import (
 
 # 1. 사용자 개인정보
 class MyInfoView(generics.RetrieveUpdateAPIView):
-    serializer_class = UserInfoSerializer
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
         return self.request.user
+
+    def get_serializer_class(self):
+        if self.request.method in ['PUT', 'PATCH']:
+            from .serializers import UserUpdateSerializer
+            return UserUpdateSerializer
+        return UserInfoSerializer
 
 # 2. 키워드
 class KeywordListView(generics.ListAPIView):
@@ -73,6 +78,14 @@ class MyCertificationDetailView(generics.RetrieveUpdateDestroyAPIView):
 class MyBookmarkListView(generics.ListAPIView):
     serializer_class = BookmarkSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Bookmark.objects.filter(user=self.request.user)
+
+class MyBookmarkDeleteView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    queryset = Bookmark.objects.all()
+    lookup_url_kwarg = 'bookmark_id'
 
     def get_queryset(self):
         return Bookmark.objects.filter(user=self.request.user)

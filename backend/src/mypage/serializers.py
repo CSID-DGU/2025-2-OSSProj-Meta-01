@@ -25,6 +25,38 @@ class UserInfoSerializer(serializers.ModelSerializer):
             'receive_notifications',
         ]
 
+class UserUpdateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)
+    major_id = serializers.IntegerField(write_only=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            'password',
+            'phone',
+            'email',
+            'major_id',
+            'year',
+            'gpa',
+            'income_level',
+            'receive_notifications',
+        ]
+
+    def update(self, instance, validated_data):
+
+        if "password" in validated_data:
+            instance.set_password(validated_data.pop("password"))
+
+        if "major_id" in validated_data:
+            from authentication.models import Major
+            try:
+                major_obj = Major.objects.get(major_id=validated_data.pop("major_id"))
+                instance.major = major_obj
+            except Major.DoesNotExist:
+                raise serializers.ValidationError({"major_id": "유효하지 않은 전공입니다."})
+
+        return super().update(instance, validated_data)
+
 # 2. 관심 키워드
 class KeywordSerializer(serializers.ModelSerializer):
     class Meta:
