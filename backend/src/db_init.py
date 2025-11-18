@@ -178,6 +178,100 @@ sql_commands = [
 for command in sql_commands:
     cursor.execute(command)
 
+# 초기 데이터 삽입
+# 1. 대학교
+cursor.execute("""
+INSERT INTO Universities (university_name)
+SELECT * FROM (SELECT '동국대학교') AS tmp
+WHERE NOT EXISTS (SELECT university_name FROM Universities WHERE university_name = '동국대학교');
+""")
+cursor.execute("""
+INSERT INTO Universities (university_name)
+SELECT * FROM (SELECT '서울대학교') AS tmp
+WHERE NOT EXISTS (SELECT university_name FROM Universities WHERE university_name = '서울대학교');
+""")
+
+# 2. 전공
+cursor.execute("""
+INSERT INTO Majors (university_id, major_name)
+SELECT (SELECT university_id FROM Universities WHERE university_name='동국대학교'), '전자전기공학부'
+WHERE NOT EXISTS (SELECT major_name FROM Majors WHERE major_name = '전자전기공학부');
+""")
+cursor.execute("""
+INSERT INTO Majors (university_id, major_name)
+SELECT (SELECT university_id FROM Universities WHERE university_name='동국대학교'), '국어국문문예창작학부'
+WHERE NOT EXISTS (SELECT major_name FROM Majors WHERE major_name = '국어국문문예창작학부');
+""")
+cursor.execute("""
+INSERT INTO Majors (university_id, major_name)
+SELECT (SELECT university_id FROM Universities WHERE university_name='서울대학교'), '전기정보공학부'
+WHERE NOT EXISTS (SELECT major_name FROM Majors WHERE major_name = '전기정보공학부');
+""")
+cursor.execute("""
+INSERT INTO Majors (university_id, major_name)
+SELECT (SELECT university_id FROM Universities WHERE university_name='서울대학교'), '국어국문학과'
+WHERE NOT EXISTS (SELECT major_name FROM Majors WHERE major_name = '국어국문학과');
+""")
+
+# 3. 사용자
+users = [
+    {
+        "id": "test1",
+        "password": "password1",
+        "user_name": "김김김",
+        "phone": "01011111111",
+        "email": "111@test.com",
+        "major_id": 1,
+        "year": "4",
+        "gpa": 3.00,
+        "income_level": "4분위",
+        "receive_notifications": 1
+    },
+    {
+        "id": "test2",
+        "password": "password2",
+        "user_name": "이이이",
+        "phone": "01022222222",
+        "email": "222@test.com",
+        "major_id": 2,
+        "year": "2",
+        "gpa": 3.50,
+        "income_level": "5분위",
+        "receive_notifications": 1
+    },
+    {
+        "id": "test3",
+        "password": "password3",
+        "user_name": "박박박",
+        "phone": "01033333333",
+        "email": "333@test.com",
+        "major_id": 4,
+        "year": "5",
+        "gpa": 2.70,
+        "income_level": "2분위",
+        "receive_notifications": 1
+    }
+]
+
+for u in users:
+    cursor.execute(f"""
+    INSERT INTO Users (id, password, user_name, phone, email, major_id, year, gpa, income_level, receive_notifications)
+    SELECT * FROM (
+        SELECT 
+            '{u['id']}', 
+            '{u['password']}', 
+            '{u['user_name']}', 
+            '{u['phone']}', 
+            '{u['email']}', 
+            {u['major_id']},
+            '{u['year']}',
+            {u['gpa']},
+            '{u['income_level']}',
+            {u['receive_notifications']}
+    ) AS tmp
+    WHERE NOT EXISTS (SELECT id FROM Users WHERE id='{u['id']}');
+    """)
+
 connection.commit()
 cursor.close()
 connection.close()
