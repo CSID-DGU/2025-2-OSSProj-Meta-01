@@ -12,10 +12,11 @@ mysql-connector-python==9.0.0
 # 환경변수 관리
 python-dotenv>=1.0.0
 
-# AI/ML - 텍스트 요약
-transformers>=4.30.0
-torch>=2.0.0
-sentencepiece>=0.1.99
+# OpenAI
+openai == 2.7.1
+
+# Pydantic
+pydantic == 2.12.3
 
 # Django
 Django==5.0.6
