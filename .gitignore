@@ -4,4 +4,4 @@
 
 .env
 
-/backend/src/crawler/__pycache__/
+__pycache__/
