@@ -86,8 +86,8 @@ DATABASES = {
         'NAME': 'meta_mysql_database',
         'USER': 'meta_mysql_user',
         'PASSWORD': 'meta_mysql_password',
-        'HOST': 'mysql',
-        'PORT': '3306',
+        'HOST': '127.0.0.1',
+        'PORT': '3307',
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         }
