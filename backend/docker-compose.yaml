@@ -64,7 +64,7 @@ services:
   # MySQL 데이터베이스 서비스
   mysql:
     image: mysql:8.0  # MySQL 8.0 버전 사용
-    container_name: mysql_container  # 컨테이너 이름 지정
+    container_name: meta_mysql_container  # 컨테이너 이름 지정
     restart: always  # 컨테이너 중지 시 자동 재시작
 
     # 포트 매핑 (호스트:컨테이너)
@@ -73,17 +73,17 @@ services:
 
     # 환경 변수 설정
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword  # 루트 계정 비밀번호 (운영 시 변경 필요)
-      MYSQL_DATABASE: YOUR_MYSQL_DATABASE  # 초기 생성할 데이터베이스 이름
-      MYSQL_USER: YOUR_MYSQL_USER  # 일반 사용자 계정명
-      MYSQL_PASSWORD: YOUR_MYSQL_PASSWORD  # 일반 사용자 비밀번호
+      MYSQL_ROOT_PASSWORD: metarootpassword  # 루트 계정 비밀번호
+      MYSQL_DATABASE: meta_mysql_database  # 초기 생성할 데이터베이스 이름
+      MYSQL_USER: meta_mysql_user  # 일반 사용자 계정명
+      MYSQL_PASSWORD: meta_mysql_password  # 일반 사용자 비밀번호
 
     # 볼륨 마운트
     # volumes:
     #   - mysql_data:/var/lib/mysql
 
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pYOUR_MYSQL_PASSWORD"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pmeta_mysql_password"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -111,9 +111,9 @@ services:
     environment:
       MYSQL_HOST: mysql  # MySQL 컨테이너 이름 (호스트 지정)
       MYSQL_PORT: 3306
-      MYSQL_DATABASE: YOUR_MYSQL_DATABASE
-      MYSQL_USER: YOUR_MYSQL_USER
-      MYSQL_PASSWORD: YOUR_MYSQL_PASSWORD
+      MYSQL_DATABASE: meta_mysql_database
+      MYSQL_USER: meta_mysql_user
+      MYSQL_PASSWORD: meta_mysql_password
 
     # 네트워크 설정
     networks:
