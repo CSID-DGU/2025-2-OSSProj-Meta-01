@@ -1,0 +1,78 @@
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+
+from authentication.models import User
+from .models import (
+    Keyword, UserKeyword,
+    Certification, UserCertification,
+    Bookmark
+)
+from .serializers import (
+    UserInfoSerializer,
+    KeywordSerializer, UserKeywordSerializer,
+    CertificationSerializer, UserCertificationSerializer,
+    BookmarkSerializer
+)
+
+# 1. 사용자 개인정보
+class MyInfoView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserInfoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+# 2. 키워드
+class KeywordListView(generics.ListAPIView):
+    queryset = Keyword.objects.all()
+    serializer_class = KeywordSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class MyKeywordListCreateView(generics.ListCreateAPIView):
+    serializer_class = UserKeywordSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return UserKeyword.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class MyKeywordDeleteView(generics.DestroyAPIView):
+    queryset = UserKeyword.objects.all()
+    lookup_url_kwarg = 'user_keyword_id'
+    permission_classes = [IsAuthenticated]
+
+# 3. 자격증
+class CertificationListView(generics.ListAPIView):
+    queryset = Certification.objects.all()
+    serializer_class = CertificationSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class MyCertificationListCreateView(generics.ListCreateAPIView):
+    serializer_class = UserCertificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return UserCertification.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class MyCertificationDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = UserCertification.objects.all()
+    serializer_class = UserCertificationSerializer
+    lookup_url_kwarg = 'user_certification_id'
+    permission_classes = [IsAuthenticated]
+
+# 4. 북마크
+class MyBookmarkListView(generics.ListAPIView):
+    serializer_class = BookmarkSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Bookmark.objects.filter(user=self.request.user)

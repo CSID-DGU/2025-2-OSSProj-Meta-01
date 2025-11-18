@@ -2,8 +2,8 @@ import os
 import mysql.connector
 from dotenv import load_dotenv
 
-# .env.example 로드
-load_dotenv(os.path.join(os.path.dirname(__file__), '../.env.example'))
+# .env 로드
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 connection = mysql.connector.connect(
     host=os.getenv('MYSQL_HOST', 'localhost'),
@@ -214,63 +214,139 @@ WHERE NOT EXISTS (SELECT major_name FROM Majors WHERE major_name = '국어국문
 """)
 
 # 3. 사용자
-users = [
-    {
-        "id": "test1",
-        "password": "password1",
-        "user_name": "김김김",
-        "phone": "01011111111",
-        "email": "111@test.com",
-        "major_id": 1,
-        "year": "4",
-        "gpa": 3.00,
-        "income_level": "4분위",
-        "receive_notifications": 1
-    },
-    {
-        "id": "test2",
-        "password": "password2",
-        "user_name": "이이이",
-        "phone": "01022222222",
-        "email": "222@test.com",
-        "major_id": 2,
-        "year": "2",
-        "gpa": 3.50,
-        "income_level": "5분위",
-        "receive_notifications": 1
-    },
-    {
-        "id": "test3",
-        "password": "password3",
-        "user_name": "박박박",
-        "phone": "01033333333",
-        "email": "333@test.com",
-        "major_id": 4,
-        "year": "5",
-        "gpa": 2.70,
-        "income_level": "2분위",
-        "receive_notifications": 1
-    }
-]
+cursor.execute("""
+INSERT INTO Users (id, password, user_name, phone, email, major_id, year, gpa, income_level, receive_notifications)
+SELECT * FROM (
+    SELECT 
+        'test1' AS id,
+        'password1' AS password,
+        '김김김' AS user_name,
+        '01011111111' AS phone,
+        '111@test.com' AS email,
+        1 AS major_id,
+        '4' AS year,
+        3.00 AS gpa,
+        '4분위' AS income_level,
+        1 AS receive_notifications
+) AS tmp
+WHERE NOT EXISTS (SELECT id FROM Users WHERE id='test1');
+""")
 
-for u in users:
-    cursor.execute(f"""
-    INSERT INTO Users (id, password, user_name, phone, email, major_id, year, gpa, income_level, receive_notifications)
-    SELECT * FROM (
-        SELECT 
-            '{u['id']}', 
-            '{u['password']}', 
-            '{u['user_name']}', 
-            '{u['phone']}', 
-            '{u['email']}', 
-            {u['major_id']},
-            '{u['year']}',
-            {u['gpa']},
-            '{u['income_level']}',
-            {u['receive_notifications']}
-    ) AS tmp
-    WHERE NOT EXISTS (SELECT id FROM Users WHERE id='{u['id']}');
-    """)
+cursor.execute("""
+INSERT INTO Users (id, password, user_name, phone, email, major_id, year, gpa, income_level, receive_notifications)
+SELECT * FROM (
+    SELECT 
+        'test2' AS id,
+        'password2' AS password,
+        '이이이' AS user_name,
+        '01022222222' AS phone,
+        '222@test.com' AS email,
+        2 AS major_id,
+        '2' AS year,
+        3.50 AS gpa,
+        '5분위' AS income_level,
+        1 AS receive_notifications
+) AS tmp
+WHERE NOT EXISTS (SELECT id FROM Users WHERE id='test2');
+""")
+
+cursor.execute("""
+INSERT INTO Users (id, password, user_name, phone, email, major_id, year, gpa, income_level, receive_notifications)
+SELECT * FROM (
+    SELECT 
+        'test3' AS id,
+        'password3' AS password,
+        '박박박' AS user_name,
+        '01033333333' AS phone,
+        '333@test.com' AS email,
+        4 AS major_id,
+        '5' AS year,
+        2.70 AS gpa,
+        '2분위' AS income_level,
+        1 AS receive_notifications
+) AS tmp
+WHERE NOT EXISTS (SELECT id FROM Users WHERE id='test3');
+""")
+
+# 4. 키워드
+cursor.execute("""
+INSERT INTO Keywords (keyword)
+SELECT * FROM (SELECT '교내장학' AS keyword) AS tmp
+WHERE NOT EXISTS (SELECT keyword FROM Keywords WHERE keyword='교내장학');
+""")
+
+cursor.execute("""
+INSERT INTO Keywords (keyword)
+SELECT * FROM (SELECT '교외장학' AS keyword) AS tmp
+WHERE NOT EXISTS (SELECT keyword FROM Keywords WHERE keyword='교외장학');
+""")
+
+cursor.execute("""
+INSERT INTO Keywords (keyword)
+SELECT * FROM (SELECT '이공계' AS keyword) AS tmp
+WHERE NOT EXISTS (SELECT keyword FROM Keywords WHERE keyword='이공계');
+""")
+
+cursor.execute("""
+INSERT INTO Keywords (keyword)
+SELECT * FROM (SELECT '인문계' AS keyword) AS tmp
+WHERE NOT EXISTS (SELECT keyword FROM Keywords WHERE keyword='인문계');
+""")
+
+cursor.execute("""
+INSERT INTO Keywords (keyword)
+SELECT * FROM (SELECT '예체능' AS keyword) AS tmp
+WHERE NOT EXISTS (SELECT keyword FROM Keywords WHERE keyword='예체능');
+""")
+
+# 5. 자격증
+cursor.execute("""
+INSERT INTO Certifications (certification_name, category)
+SELECT * FROM (
+    SELECT 'TOEIC' AS certification_name, '어학' AS category
+) AS tmp
+WHERE NOT EXISTS (SELECT certification_name FROM Certifications WHERE certification_name='TOEIC');
+""")
+
+cursor.execute("""
+INSERT INTO Certifications (certification_name, category)
+SELECT * FROM (
+    SELECT 'TOEFL' AS certification_name, '어학' AS category
+) AS tmp
+WHERE NOT EXISTS (SELECT certification_name FROM Certifications WHERE certification_name='TOEFL');
+""")
+
+cursor.execute("""
+INSERT INTO Certifications (certification_name, category)
+SELECT * FROM (
+    SELECT 'IELTS' AS certification_name, '어학' AS category
+) AS tmp
+WHERE NOT EXISTS (SELECT certification_name FROM Certifications WHERE certification_name='IELTS');
+""")
+
+cursor.execute("""
+INSERT INTO Certifications (certification_name, category)
+SELECT * FROM (
+    SELECT '전기기사' AS certification_name, '국가기술' AS category
+) AS tmp
+WHERE NOT EXISTS (SELECT certification_name FROM Certifications WHERE certification_name='전기기사');
+""")
+
+cursor.execute("""
+INSERT INTO Certifications (certification_name, category)
+SELECT * FROM (
+    SELECT '전자기사' AS certification_name, '국가기술' AS category
+) AS tmp
+WHERE NOT EXISTS (SELECT certification_name FROM Certifications WHERE certification_name='전자기사');
+""")
+
+cursor.execute("""
+INSERT INTO Certifications (certification_name, category)
+SELECT * FROM (
+    SELECT '정보처리기능사' AS certification_name, '국가기술' AS category
+) AS tmp
+WHERE NOT EXISTS (SELECT certification_name FROM Certifications WHERE certification_name='정보처리기능사');
+""")
 
 connection.commit()
 cursor.close()
