@@ -61,6 +61,64 @@ services:
     networks:
       - app-network
 
+  # MySQL 데이터베이스 서비스
+  mysql:
+    image: mysql:8.0  # MySQL 8.0 버전 사용
+    container_name: meta_mysql_container  # 컨테이너 이름 지정
+    restart: always  # 컨테이너 중지 시 자동 재시작
+
+    # 포트 매핑 (호스트:컨테이너)
+    ports:
+      - "3307:3306"  # MySQL 기본 포트
+
+    # 환경 변수 설정
+    environment:
+      MYSQL_ROOT_PASSWORD: metarootpassword  # 루트 계정 비밀번호
+      MYSQL_DATABASE: meta_mysql_database  # 초기 생성할 데이터베이스 이름
+      MYSQL_USER: meta_mysql_user  # 일반 사용자 계정명
+      MYSQL_PASSWORD: meta_mysql_password  # 일반 사용자 비밀번호
+
+    # 볼륨 마운트
+    # volumes:
+    #   - mysql_data:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pmeta_mysql_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    # 네트워크 설정
+    networks:
+      app-network:
+        aliases:
+          - localhost
+
+  # DB 초기화용 Python 스크립트 컨테이너
+  db_init:
+    image: python:3.11  # Python 3.11 이미지 사용
+    container_name: db_initializer  # 컨테이너 이름
+    depends_on:
+      - mysql  # MySQL 실행 완료 후 실행
+    volumes:
+      - .:/app  # 현재 backend 디렉토리를 컨테이너 내부 /app에 마운트
+    working_dir: /app  # 작업 디렉토리 지정
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             python src/db_init.py"
+
+    # 환경 변수 설정 (MySQL 컨테이너와 동일하게 맞춤)
+    environment:
+      MYSQL_HOST: mysql  # MySQL 컨테이너 이름 (호스트 지정)
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: meta_mysql_database
+      MYSQL_USER: meta_mysql_user
+      MYSQL_PASSWORD: meta_mysql_password
+
+    # 네트워크 설정
+    networks:
+      - app-network
+
 # 볼륨 정의 (호스트 경로 직접 마운트 사용으로 불필요)
 # volumes:
 #   mongodb_data:  # MongoDB 데이터를 저장할 볼륨
@@ -72,4 +130,3 @@ services:
 networks:
   app-network:  # 애플리케이션 네트워크
     driver: bridge
-

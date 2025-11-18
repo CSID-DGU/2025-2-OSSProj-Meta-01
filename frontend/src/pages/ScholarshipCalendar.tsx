@@ -256,6 +256,19 @@ export default function ScholarshipCalendar() {
                         )})`
                     : null;
 
+                const today = new Date();
+                const deadlineDate = new Date(it.deadline);
+                const diffDays = Math.floor(
+                  (deadlineDate.getTime() - today.getTime()) /
+                    (1000 * 60 * 60 * 24)
+                );
+
+                const isExpired = diffDays < 0;
+                const dayOptions = Array.from(
+                  { length: Math.min(diffDays, 10) }, // 최대 10일까지만
+                  (_, i) => i + 1
+                );
+
                 return (
                   <div key={it.id} style={itemCardStyle}>
                     <div
@@ -295,58 +308,45 @@ export default function ScholarshipCalendar() {
                       </button>
 
                       <button
-                        style={pillBtn}
+                        style={{
+                          ...pillBtn,
+                          opacity: isExpired ? 0.5 : 1,
+                          cursor: isExpired ? "not-allowed" : "pointer",
+                        }}
+                        disabled={isExpired}
                         onClick={() =>
+                          !isExpired &&
                           setShowDropdownFor(
                             showDropdownFor === it.id ? null : it.id
                           )
                         }
                       >
-                        알림일 추가
+                        {isExpired ? "마감" : "알림일 추가"}
                       </button>
                     </div>
 
-                    {showDropdownFor === it.id && (
+                    {showDropdownFor === it.id && !isExpired && (
                       <div style={{ marginTop: 10 }}>
-                        {(() => {
-                          const today = new Date();
-                          const deadlineDate = new Date(it.deadline);
-                          const diffDays = Math.floor(
-                            (deadlineDate.getTime() - today.getTime()) /
-                              (1000 * 60 * 60 * 24)
-                          );
-                          const dayOptions = Array.from(
-                            { length: diffDays },
-                            (_, i) => i + 1
-                          );
+                        <button
+                          style={pillBtn}
+                          onClick={() =>
+                            handleAlertSelect(it.id, 0, it.deadline)
+                          }
+                        >
+                          D-Day
+                        </button>
 
-                          return (
-                            <>
-                              {dayOptions.map((n) => (
-                                <button
-                                  key={n}
-                                  style={{
-                                    ...pillBtn,
-                                    marginRight: 6,
-                                  }}
-                                  onClick={() =>
-                                    handleAlertSelect(it.id, n, it.deadline)
-                                  }
-                                >
-                                  D-{n}
-                                </button>
-                              ))}
-                              <button
-                                style={pillBtn}
-                                onClick={() =>
-                                  handleAlertSelect(it.id, 0, it.deadline)
-                                }
-                              >
-                                마감일 당일
-                              </button>
-                            </>
-                          );
-                        })()}
+                        {dayOptions.map((n) => (
+                          <button
+                            key={n}
+                            style={{ ...pillBtn, marginRight: 6 }}
+                            onClick={() =>
+                              handleAlertSelect(it.id, n, it.deadline)
+                            }
+                          >
+                            D-{n}
+                          </button>
+                        ))}
                       </div>
                     )}
 
@@ -390,6 +390,7 @@ export default function ScholarshipCalendar() {
   );
 }
 
+/* --- 스타일 --- */
 const containerStyle: React.CSSProperties = {
   maxWidth: "500px",
   margin: "0 auto",
