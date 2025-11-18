@@ -6,10 +6,10 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 connection = mysql.connector.connect(
-    host=os.getenv('MYSQL_HOST', 'localhost'),
+    host=os.getenv('MYSQL_HOST'),
     user=os.getenv('MYSQL_USER'),
     password=os.getenv('MYSQL_PASSWORD'),
-    port=os.getenv('MYSQL_PORT', '3307')
+    port=os.getenv('MYSQL_PORT')
 )
 
 cursor = connection.cursor()
