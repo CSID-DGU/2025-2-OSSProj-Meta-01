@@ -3,10 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.hashers import check_password
-from django.contrib.auth import authenticate
-from .models import User
-from .serializers import UserSignupSerializer, UserLoginSerializer, LogoutSerializer
+from .serializers import UserSignupSerializer, UserLoginSerializer, LogoutSerializer, TokenRefreshSerializer
 
 
 class SignupView(APIView):
@@ -57,3 +54,12 @@ class LogoutView(APIView):
             {"message": "로그아웃이 완료되었습니다."},
             status=status.HTTP_205_RESET_CONTENT
         )
+
+class TokenRefreshView(APIView):
+    def post(self, request):
+        serializer = TokenRefreshSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
