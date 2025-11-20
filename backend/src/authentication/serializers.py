@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from django.contrib.auth import authenticate
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.hashers import check_password
 from .models import User, Major
@@ -15,23 +14,23 @@ class UserSignupSerializer(serializers.ModelSerializer):
             )
         ],
         error_messages={
-            "required": "필수 입력 항목입니다.",
-            "blank": "필수 입력 항목입니다."
+            "required": "아이디는 필수 입력 항목입니다.",
+            "blank": "아이디는 필수 입력 항목입니다."
         }
     )
 
     password = serializers.CharField(
         write_only=True,
         error_messages={
-            "required": "필수 입력 항목입니다.",
-            "blank": "필수 입력 항목입니다."
+            "required": "비밀번호는 필수 입력 항목입니다.",
+            "blank": "비밀번호는 필수 입력 항목입니다."
         }
     )
 
     user_name = serializers.CharField(
         error_messages={
-            "required": "필수 입력 항목입니다.",
-            "blank": "필수 입력 항목입니다."
+            "required": "이름은 필수 입력 항목입니다.",
+            "blank": "이름은 필수 입력 항목입니다."
         }
     )
 
@@ -44,8 +43,8 @@ class UserSignupSerializer(serializers.ModelSerializer):
             )
         ],
         error_messages={
-            "required": "필수 입력 항목입니다.",
-            "blank": "필수 입력 항목입니다.",
+            "required": "전화번호는 필수 입력 항목입니다.",
+            "blank": "전화번호는 필수 입력 항목입니다.",
             "invalid": "올바른 전화번호 형식이 아닙니다."
         }
     )
@@ -58,8 +57,8 @@ class UserSignupSerializer(serializers.ModelSerializer):
             )
         ],
         error_messages={
-            "required": "필수 입력 항목입니다.",
-            "blank": "필수 입력 항목입니다.",
+            "required": "이메일은 필수 입력 항목입니다.",
+            "blank": "이메일은 필수 입력 항목입니다.",
             "invalid": "올바른 이메일 형식이 아닙니다."
         }
     )
@@ -67,8 +66,8 @@ class UserSignupSerializer(serializers.ModelSerializer):
     major = serializers.PrimaryKeyRelatedField(
         queryset=Major.objects.all(),
         error_messages={
-            "required": "필수 입력 항목입니다.",
-            "blank": "필수 입력 항목입니다."
+            "required": "전공은 필수 입력 항목입니다.",
+            "blank": "전공은 필수 입력 항목입니다."
         }
     )
 
@@ -76,14 +75,14 @@ class UserSignupSerializer(serializers.ModelSerializer):
         choices=['1','2','3','4','5','6'],
         error_messages={
             "invalid_choice": "올바른 학년 형식이 아닙니다.",
-            "required": "필수 입력 항목입니다."
+            "required": "학년은 필수 입력 항목입니다."
         }
     )
 
     gpa = serializers.CharField(
         error_messages={
-            "required": "필수 입력 항목입니다.",
-            "blank": "필수 입력 항목입니다."
+            "required": "학점은 필수 입력 항목입니다.",
+            "blank": "학점은 필수 입력 항목입니다."
         }
     )
 
@@ -172,3 +171,22 @@ class LogoutSerializer(serializers.Serializer):
     def save(self, **kwargs):
         token = self.validated_data["token"]
         token.blacklist()
+
+class TokenRefreshSerializer(serializers.Serializer):
+    refresh = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, data):
+        refresh_token = data.get("refresh")
+
+        if not refresh_token:
+            raise serializers.ValidationError({"error": "refresh 토큰을 입력해주세요."})
+
+        try:
+            token = RefreshToken(refresh_token)
+        except TokenError:
+            raise serializers.ValidationError({"error": "유효하지 않은 refresh 토큰입니다."})
+
+        return {
+            "access": str(token.access_token),
+            "refresh": str(token)
+        }
