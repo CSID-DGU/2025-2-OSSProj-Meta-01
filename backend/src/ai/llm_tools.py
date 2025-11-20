@@ -39,18 +39,20 @@ class LLMClassificationTool:
         self.classes = ["교내장학", "교외장학", "국가장학", "봉사", "성적우수", "등록금지원", "생활비지원", "이공계", "인문계", "예체능", "종교", "저소득층", "기업연계", "자격증"]
     
     def classify_content(self, content):
-        system_prompt = f"당신은 장학금 공지사항을 분류하는 전문가입니다. 주어진 장학금 내용을 읽고, 반드시 해당하는 라벨을 부여하세요. 라벨은 다음 중 하나여야 합니다: {self.classes}"
+        system_prompt = f"""
+        당신은 장학금 공지사항을 분류하는 전문가입니다. 주어진 장학금 내용을 읽고, 반드시 해당하는 라벨을 부여하세요. 라벨은 다음 중 하나여야 합니다: {self.classes}
+        '교내장학'이나 '교외장학' 중 하나는 반드시 포함해야 합니다.
+        """
 
-        response = self.client.responses.parse(
-            model="gpt-4.1-mini",
-            temperature=0,
-            input=[
+        completion = self.client.beta.chat.completions.parse(
+            model="gpt-4o-mini-2024-07-18",
+            messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": content}
             ],
-            text_format=LLMClassificationResponse
+            response_format=LLMClassificationResponse
         )
-        return response.output_parsed
+        return completion.choices[0].message.parsed.model_dump()
     
 if __name__ == "__main__":
     llm_summary_tool = LLMSummaryTool()
