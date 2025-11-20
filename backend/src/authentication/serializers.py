@@ -10,7 +10,7 @@ class UserSignupSerializer(serializers.ModelSerializer):
         validators=[
             UniqueValidator(
                 queryset=User.objects.all(),
-                message="이미 존재하는 아이디입니다."
+                message="이미 가입된 아이디입니다."
             )
         ],
         error_messages={
