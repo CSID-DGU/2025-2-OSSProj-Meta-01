@@ -34,7 +34,7 @@ class User(models.Model):
     email = models.CharField(max_length=100, unique=True)
     major = models.ForeignKey(Major, on_delete=models.CASCADE)
     year = models.CharField(max_length=1, choices=YEAR_CHOICES)
-    gpa = models.DecimalField(max_digits=3, decimal_places=2)
+    gpa = models.CharField(max_length=10)
     income_level = models.CharField(max_length=10, choices=INCOME_CHOICES, null=True, blank=True)
     receive_notifications = models.BooleanField(default=False)
 

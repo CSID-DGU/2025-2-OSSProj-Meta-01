@@ -54,7 +54,7 @@ sql_commands = [
         email VARCHAR(100) NOT NULL UNIQUE,
         major_id INT NOT NULL,
         year ENUM('1','2','3','4','5','6') NOT NULL,
-        gpa DECIMAL(3,2) NOT NULL,
+        gpa VARCHAR(10) NOT NULL,
         income_level ENUM('1분위','2분위','3분위','4분위','5분위','6분위','7분위','8분위','9분위','10분위') NULL,
         receive_notifications TINYINT(1) NOT NULL DEFAULT 0,
         PRIMARY KEY (user_id),
