@@ -7,15 +7,33 @@ const Login: React.FC = () => {
   const [studentId, setStudentId] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = () => {
-    const savedId = localStorage.getItem("studentId");
-    const savedPw = localStorage.getItem("password");
+  const handleLogin = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/auth/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          student_id: studentId, // ⚠️ 백엔드 요구 스펙에 맞춰 수정 필요
+          password: password,
+        }),
+      });
 
-    if (studentId === savedId && password === savedPw) {
-      alert("로그인 성공!");
-      navigate("/main", { replace: true });
-    } else {
-      alert("로그인 실패. 학번/비밀번호를 확인하세요.");
+      const data = await response.json();
+
+      if (response.ok) {
+        // ⚠️ 백엔드가 주는 키 이름 반드시 확인 (access / refresh)
+        localStorage.setItem("accessToken", data.access);
+        localStorage.setItem("refreshToken", data.refresh);
+
+        alert("로그인 성공!");
+        navigate("/main", { replace: true });
+      } else {
+        alert(data.detail || "로그인 실패. 아이디/비밀번호를 확인하세요.");
+      }
+    } catch (error) {
+      alert("서버 연결에 문제가 발생했습니다.");
     }
   };
 
