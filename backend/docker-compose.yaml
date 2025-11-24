@@ -99,13 +99,16 @@ services:
     image: python:3.11  # Python 3.11 이미지 사용
     container_name: db_initializer  # 컨테이너 이름
     depends_on:
-      - mysql  # MySQL 실행 완료 후 실행
+      mysql:
+        condition: service_healthy  # MySQL 실행 완료 후 실행
     volumes:
       - .:/app  # 현재 backend 디렉토리를 컨테이너 내부 /app에 마운트
     working_dir: /app  # 작업 디렉토리 지정
     command: >
-      sh -c "pip install --no-cache-dir -r requirements.txt &&
-             python src/db_init.py"
+      sh -c "
+        pip install --no-cache-dir -r requirements.txt &&
+        python src/db_init.py
+      "
 
     # 환경 변수 설정 (MySQL 컨테이너와 동일하게 맞춤)
     environment:
