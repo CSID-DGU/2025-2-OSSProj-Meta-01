@@ -244,6 +244,7 @@ class UserCertificationListSerializer(serializers.ModelSerializer):
         fields = ['user_certification_id', 'certification_name', 'category']
 
 class UserCertificationSerializer(serializers.ModelSerializer):
+    certification_id = serializers.IntegerField(write_only=True)
     certification_name = serializers.CharField(source="certification.certification_name", read_only=True)
     category = serializers.CharField(source="certification.category", read_only=True)
     score = serializers.CharField(required=False, allow_blank=True)
@@ -253,6 +254,7 @@ class UserCertificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserCertification
         fields = [
+            'certification_id',
             'certification_name',
             'category',
             'score',
