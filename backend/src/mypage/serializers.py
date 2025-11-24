@@ -238,7 +238,7 @@ class UserCertificationListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserCertification
-        fields = ['user_certification_id', 'certification_name', 'category']
+        fields = ['certification_name', 'category']
 
 class UserCertificationSerializer(serializers.ModelSerializer):
     certification_name = serializers.CharField(source="certification.certification_name", read_only=True)
