@@ -26,7 +26,7 @@ class LLMSummaryTool:
         completion = self.client.beta.chat.completions.parse(
             model="gpt-4o-mini-2024-07-18",
             messages=[
-                {"role": "system", "content": "당신은 장학금 공지사항을 요약하는 전문가입니다. 신청기간, 마감일자, 신청방법, 신청대상, 신청기준, 혜택, 문의방법을 추출하세요."},
+                {"role": "system", "content": "당신은 장학금 공지사항을 요약하는 전문가입니다. 신청 시작일, 신청 마감일, 신청방법, 신청대상, 신청기준, 혜택, 문의방법을 추출하세요."},
                 {"role": "user", "content": content}
             ],
             response_format=LLMSummaryResponse
