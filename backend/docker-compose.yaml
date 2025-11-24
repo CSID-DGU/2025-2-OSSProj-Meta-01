@@ -18,10 +18,9 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: admin123  # 루트 비밀번호 (실제 운영시 변경 필요!)
       MONGO_INITDB_DATABASE: dongguk_db  # 초기 생성할 데이터베이스 이름
     
-    # 볼륨 마운트 제거 - 데이터는 컨테이너 내부에만 저장 (컨테이너 삭제시 데이터도 삭제됨)
-    # volumes:
-    #   - ./data/mongodb:/data/db
-    #   - ./data/mongodb_config:/data/configdb
+    volumes:
+      - ./data/mongodb:/data/db
+      - ./data/mongodb_config:/data/configdb
     
     # 컨테이너 헬스체크 설정
     healthcheck:
@@ -119,12 +118,11 @@ services:
     networks:
       - app-network
 
-# 볼륨 정의 (호스트 경로 직접 마운트 사용으로 불필요)
-# volumes:
-#   mongodb_data:  # MongoDB 데이터를 저장할 볼륨
-#     driver: local
-#   mongodb_config:  # MongoDB 설정을 저장할 볼륨
-#     driver: local
+volumes:
+  mongodb_data:  # MongoDB 데이터를 저장할 볼륨
+    driver: local
+  mongodb_config:  # MongoDB 설정을 저장할 볼륨
+    driver: local
 
 # 네트워크 정의
 networks:
