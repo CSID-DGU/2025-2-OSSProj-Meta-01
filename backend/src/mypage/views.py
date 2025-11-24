@@ -165,8 +165,18 @@ class MyBookmarkListView(CustomExceptionHandlerMixin, generics.ListAPIView):
 
 class MyBookmarkDeleteView(CustomExceptionHandlerMixin, generics.DestroyAPIView):
     permission_classes = [IsAuthenticated]
-    queryset = Bookmark.objects.all()
     lookup_url_kwarg = 'bookmark_id'
 
     def get_queryset(self):
         return Bookmark.objects.filter(user=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        super().destroy(request, *args, **kwargs)
+
+        updated = Bookmark.objects.filter(user=request.user)
+        updated_data = BookmarkSerializer(updated, many=True).data
+
+        return Response({
+            "message": "북마크가 삭제되었습니다.",
+            "bookmarks": updated_data
+        }, status=200)

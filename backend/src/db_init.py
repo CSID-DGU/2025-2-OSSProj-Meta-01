@@ -798,6 +798,74 @@ WHERE NOT EXISTS (
 );
 """)
 
+# 8. 북마크 (테스트용 가짜)
+cursor.execute("""
+INSERT INTO Bookmarks (user_id, scholarship_id)
+SELECT 
+    (SELECT user_id FROM Users WHERE id='test1'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 어쩌구장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Bookmarks
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test1')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 어쩌구장학금')
+);
+""")
+cursor.execute("""
+INSERT INTO Bookmarks (user_id, scholarship_id)
+SELECT 
+    (SELECT user_id FROM Users WHERE id='test1'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 저쩌구장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Bookmarks
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test1')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 저쩌구장학금')
+);
+""")
+cursor.execute("""
+INSERT INTO Bookmarks (user_id, scholarship_id)
+SELECT 
+    (SELECT user_id FROM Users WHERE id='test2'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='가나장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Bookmarks
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test2')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='가나장학금')
+);
+""")
+cursor.execute("""
+INSERT INTO Bookmarks (user_id, scholarship_id)
+SELECT 
+    (SELECT user_id FROM Users WHERE id='test2'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='다라장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Bookmarks
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test2')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='다라장학금')
+);
+""")
+cursor.execute("""
+INSERT INTO Bookmarks (user_id, scholarship_id)
+SELECT 
+    (SELECT user_id FROM Users WHERE id='test3'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='마바장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Bookmarks
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test3')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='마바장학금')
+);
+""")
+cursor.execute("""
+INSERT INTO Bookmarks (user_id, scholarship_id)
+SELECT 
+    (SELECT user_id FROM Users WHERE id='test3'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='사장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Bookmarks
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test3')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='사장학금')
+);
+""")
+
 connection.commit()
 cursor.close()
 connection.close()
