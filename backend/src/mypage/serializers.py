@@ -200,8 +200,10 @@ class KeywordSerializer(serializers.ModelSerializer):
         fields = ['keyword']
 
     def to_representation(self, instance):
-        return instance.keyword
-
+        return {
+            "keyword_id": instance.keyword_id,
+            "keyword": instance.keyword
+        }
 
 class UserKeywordSerializer(serializers.ModelSerializer):
     keyword_id = serializers.IntegerField(write_only=True)
@@ -230,15 +232,16 @@ class UserKeywordSerializer(serializers.ModelSerializer):
 class CertificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Certification
-        fields = ['certification_name', 'category']
+        fields = ['certification_id', 'certification_name', 'category']
 
 class UserCertificationListSerializer(serializers.ModelSerializer):
+    user_certification_id = serializers.IntegerField()
     certification_name = serializers.CharField(source="certification.certification_name")
     category = serializers.CharField(source="certification.category")
 
     class Meta:
         model = UserCertification
-        fields = ['certification_name', 'category']
+        fields = ['user_certification_id', 'certification_name', 'category']
 
 class UserCertificationSerializer(serializers.ModelSerializer):
     certification_name = serializers.CharField(source="certification.certification_name", read_only=True)
