@@ -197,20 +197,34 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 class KeywordSerializer(serializers.ModelSerializer):
     class Meta:
         model = Keyword
-        fields = ['keyword_id', 'keyword']
+        fields = ['keyword']
+
+    def to_representation(self, instance):
+        return instance.keyword
 
 
 class UserKeywordSerializer(serializers.ModelSerializer):
-    keyword = KeywordSerializer(read_only=True)
     keyword_id = serializers.IntegerField(write_only=True)
+    keyword = serializers.CharField(source='keyword.keyword', read_only=True)
 
     class Meta:
         model = UserKeyword
-        fields = [
-            'user_keyword_id',
-            'keyword',
-            'keyword_id',
-        ]
+        fields = ['user_keyword_id', 'keyword', 'keyword_id']
+
+    def validate_keyword_id(self, value):
+        if not Keyword.objects.filter(keyword_id=value).exists():
+            raise serializers.ValidationError("존재하지 않는 키워드입니다.")
+        return value
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        keyword_id = attrs.get("keyword_id")
+
+        if UserKeyword.objects.filter(user=user, keyword_id=keyword_id).exists():
+            raise serializers.ValidationError(
+                {"keyword_id": "이미 추가된 관심 키워드입니다."}
+            )
+        return attrs
 
 # 3. 자격증
 class CertificationSerializer(serializers.ModelSerializer):

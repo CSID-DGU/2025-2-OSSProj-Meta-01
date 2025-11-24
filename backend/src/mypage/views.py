@@ -1,5 +1,7 @@
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from authentication.models import User
 from .exceptions import CustomExceptionHandlerMixin
@@ -34,22 +36,62 @@ class KeywordListView(CustomExceptionHandlerMixin, generics.ListAPIView):
     serializer_class = KeywordSerializer
     permission_classes = [IsAuthenticated]
 
-
-class MyKeywordListCreateView(CustomExceptionHandlerMixin, generics.ListCreateAPIView):
-    serializer_class = UserKeywordSerializer
+class MyKeywordListView(CustomExceptionHandlerMixin, APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        return UserKeyword.objects.filter(user=self.request.user)
+    def get(self, request):
+        keywords = UserKeyword.objects.filter(user=request.user)
+        keyword_names = [uk.keyword.keyword for uk in keywords]
+        return Response(keyword_names)
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 
-
-class MyKeywordDeleteView(CustomExceptionHandlerMixin, generics.DestroyAPIView):
-    queryset = UserKeyword.objects.all()
-    lookup_url_kwarg = 'user_keyword_id'
+class MyKeywordCreateView(CustomExceptionHandlerMixin, APIView):
     permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = UserKeywordSerializer(
+            data=request.data, context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=request.user)
+
+        updated_keywords = list(
+            UserKeyword.objects.filter(user=request.user)
+            .values_list('keyword__keyword', flat=True)
+        )
+
+        return Response({
+            "message": "키워드가 추가되었습니다.",
+            "keywords": updated_keywords
+        })
+
+
+class MyKeywordDeleteView(CustomExceptionHandlerMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, user_keyword_id):
+        try:
+            user_keyword = UserKeyword.objects.get(
+                user=request.user,
+                user_keyword_id=user_keyword_id
+            )
+        except UserKeyword.DoesNotExist:
+            return Response(
+                {"error": "존재하지 않는 관심 키워드입니다."},
+                status=404
+            )
+
+        user_keyword.delete()
+
+        updated_keywords = list(
+            UserKeyword.objects.filter(user=request.user)
+            .values_list('keyword__keyword', flat=True)
+        )
+
+        return Response({
+            "message": "키워드가 삭제되었습니다.",
+            "keywords": updated_keywords
+        })
 
 # 3. 자격증
 class CertificationListView(CustomExceptionHandlerMixin, generics.ListAPIView):

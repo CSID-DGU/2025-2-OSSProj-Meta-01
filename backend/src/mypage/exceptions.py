@@ -32,4 +32,10 @@ class CustomExceptionHandlerMixin:
         elif response.status_code == 404:
             response.data = {"error": "요청한 데이터를 찾을 수 없습니다."}
 
+        elif response.status_code == 405:
+            response.data = {
+                "error": "허용되지 않은 요청 방식입니다.",
+                "allowed_methods": response.headers.get("Allow", "")
+            }
+        
         return response
