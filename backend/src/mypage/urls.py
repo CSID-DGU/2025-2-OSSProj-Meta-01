@@ -19,6 +19,6 @@ urlpatterns = [
     path('me/certifications/add/', MyCertificationCreateView.as_view(), name='add_my_certification'),
     path('me/certifications/<int:user_certification_id>/', MyCertificationView.as_view(), name='my_certification'),
 
-    path('me/bookmarks/', MyBookmarkListView.as_view()),
-    path('me/bookmarks/<int:bookmark_id>/', MyBookmarkDeleteView.as_view()),
+    path('me/bookmarks/', MyBookmarkListView.as_view(), name='my_bookmarks'),
+    path('me/bookmarks/<int:bookmark_id>/', MyBookmarkDeleteView.as_view(), name='delete_my_bookmark'),
 ]
