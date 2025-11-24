@@ -202,9 +202,14 @@ class CrawlTools:
         Returns:
             list: S3 URL이 추가된 게시글 목록
         """
-        print("=== 함수3: 첨부파일 S3 업로드 시작 ===")
+        # 전체 첨부파일 개수 계산
+        total_attachments = sum(len(article.get('attachments', [])) for article in enriched_articles)
+        print(f"=== 함수3: 첨부파일 S3 업로드 시작 (총 {total_attachments}개) ===")
+        
+        uploaded_count = 0
         
         def upload_attachment(article):
+            nonlocal uploaded_count
             article_no = article['글번호']
             s3_urls = []
             
@@ -234,6 +239,10 @@ class CrawlTools:
                 
                 s3_url = f"https://{self.bucket_name}.s3.ap-northeast-2.amazonaws.com/{s3_key}"
                 s3_urls.append(s3_url)
+                
+                # 진행상황 출력
+                uploaded_count += 1
+                print(f"  📎 [{uploaded_count}/{total_attachments}] 업로드 완료: {filename} (문서 {article_no})")
             
             article['attachment_s3_urls'] = s3_urls
             return article
@@ -244,7 +253,7 @@ class CrawlTools:
             for future in as_completed(futures):
                 updated_articles.append(future.result())
         
-        print(f"완료: 첨부파일 S3 업로드\n")
+        print(f"✅ 완료: 첨부파일 S3 업로드 ({uploaded_count}개)\n")
         return updated_articles
     
     def upload_images_to_s3(self, enriched_articles):
@@ -257,9 +266,14 @@ class CrawlTools:
         Returns:
             list: S3 URL이 추가된 게시글 목록
         """
-        print("=== 함수4: 이미지 S3 업로드 시작 ===")
+        # 전체 이미지 개수 계산
+        total_images = sum(len(article.get('images', [])) for article in enriched_articles)
+        print(f"=== 함수4: 이미지 S3 업로드 시작 (총 {total_images}개) ===")
+        
+        uploaded_count = 0
         
         def upload_images(article):
+            nonlocal uploaded_count
             article_no = article['글번호']
             s3_urls = []
             
@@ -286,6 +300,10 @@ class CrawlTools:
                 
                 s3_url = f"https://{self.bucket_name}.s3.ap-northeast-2.amazonaws.com/{s3_key}"
                 s3_urls.append(s3_url)
+                
+                # 진행상황 출력
+                uploaded_count += 1
+                print(f"  🖼️  [{uploaded_count}/{total_images}] 업로드 완료: 이미지 #{idx} (문서 {article_no})")
             
             article['image_s3_urls'] = s3_urls
             return article
@@ -296,7 +314,7 @@ class CrawlTools:
             for future in as_completed(futures):
                 updated_articles.append(future.result())
         
-        print(f"완료: 이미지 S3 업로드\n")
+        print(f"✅ 완료: 이미지 S3 업로드 ({uploaded_count}개)\n")
         return updated_articles
     
     def save_to_mongodb(self, enriched_articles):
