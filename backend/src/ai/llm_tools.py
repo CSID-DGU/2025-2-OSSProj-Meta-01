@@ -10,13 +10,13 @@ class LLMClassificationResponse(BaseModel):
     labels: list[str] = Field(description="장학금 공지사항을 분류하는 라벨 리스트")
     
 class LLMSummaryResponse(BaseModel):
-    신청기간: str = Field(description="장학금 신청 기간")
-    마감일자: str = Field(description="장학금 마감 일자")
+    신청시작일: str = Field(description="장학금 신청 시작일")
+    신청마감일: str = Field(description="장학금 신청 마감일")
     신청방법: str = Field(description="장학금 신청 방법")
     신청대상: str = Field(description="장학금 신청 대상")
     신청기준: str = Field(description="장학금 신청 기준")
-    혜택: str = Field(description="장학금 혜택")
-    문의방법: str = Field(description="문의처 정보")
+    신청혜택: str = Field(description="장학금 신청 혜택")
+    문의처: str = Field(description="문의처 정보")
     
 class LLMSummaryTool:
     def __init__(self):
