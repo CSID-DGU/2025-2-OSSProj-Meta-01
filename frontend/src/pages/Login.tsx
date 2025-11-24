@@ -15,8 +15,8 @@ const Login: React.FC = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          student_id: studentId, // ⚠️ 백엔드 요구 스펙에 맞춰 수정 필요
-          password: password,
+          id: studentId, // ✔️ 백엔드 스펙에 맞게 수정
+          password: password, // ✔️ 그대로 OK
         }),
       });
 
