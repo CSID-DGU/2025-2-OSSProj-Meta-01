@@ -13,7 +13,7 @@ from .models import (
 from .serializers import (
     UserInfoSerializer,
     KeywordSerializer, UserKeywordSerializer,
-    CertificationSerializer, UserCertificationSerializer,
+    CertificationSerializer, UserCertificationListSerializer, UserCertificationSerializer,
     BookmarkSerializer
 )
 
@@ -100,22 +100,60 @@ class CertificationListView(CustomExceptionHandlerMixin, generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
 
-class MyCertificationListCreateView(CustomExceptionHandlerMixin, generics.ListCreateAPIView):
-    serializer_class = UserCertificationSerializer
+class MyCertificationListView(CustomExceptionHandlerMixin, generics.ListAPIView):
+    serializer_class = UserCertificationListSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return UserCertification.objects.filter(user=self.request.user)
 
+class MyCertificationCreateView(CustomExceptionHandlerMixin, generics.CreateAPIView):
+    serializer_class = UserCertificationSerializer
+    permission_classes = [IsAuthenticated]
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
 
-class MyCertificationDetailView(CustomExceptionHandlerMixin, generics.RetrieveUpdateDestroyAPIView):
-    queryset = UserCertification.objects.all()
+        updated = UserCertification.objects.filter(user=request.user)
+        updated_data = UserCertificationListSerializer(updated, many=True).data
+
+        return Response({
+            "message": "자격증이 추가되었습니다.",
+            "certifications": updated_data
+        }, status=200)
+
+class MyCertificationView(CustomExceptionHandlerMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class = UserCertificationSerializer
-    lookup_url_kwarg = 'user_certification_id'
     permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = "user_certification_id"
+
+    def get_queryset(self):
+        return UserCertification.objects.filter(user=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        super().update(request, *args, **kwargs)
+
+        updated_instance = self.get_object()
+        updated_data = UserCertificationSerializer(updated_instance).data
+
+        return Response({
+            "message": "자격증이 수정되었습니다.",
+            "certifications": updated_data
+        }, status=200)
+
+    def destroy(self, request, *args, **kwargs):
+        super().destroy(request, *args, **kwargs)
+
+        updated = UserCertification.objects.filter(user=request.user)
+        updated_data = UserCertificationListSerializer(updated, many=True).data
+
+        return Response({
+            "message": "자격증이 삭제되었습니다.",
+            "certifications": updated_data
+        }, status=200)
 
 # 4. 북마크
 class MyBookmarkListView(CustomExceptionHandlerMixin, generics.ListAPIView):

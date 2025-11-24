@@ -230,23 +230,50 @@ class UserKeywordSerializer(serializers.ModelSerializer):
 class CertificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Certification
-        fields = ['certification_id', 'certification_name', 'category']
+        fields = ['certification_name', 'category']
 
+class UserCertificationListSerializer(serializers.ModelSerializer):
+    certification_name = serializers.CharField(source="certification.certification_name")
+    category = serializers.CharField(source="certification.category")
+
+    class Meta:
+        model = UserCertification
+        fields = ['user_certification_id', 'certification_name', 'category']
 
 class UserCertificationSerializer(serializers.ModelSerializer):
-    certification = CertificationSerializer(read_only=True)
-    certification_id = serializers.IntegerField(write_only=True)
+    certification_name = serializers.CharField(source="certification.certification_name", read_only=True)
+    category = serializers.CharField(source="certification.category", read_only=True)
+    score = serializers.CharField(required=False, allow_blank=True)
+    acquired_date = serializers.DateField(required=False)
+    expiration_date = serializers.DateField(required=False, allow_null=True)
 
     class Meta:
         model = UserCertification
         fields = [
-            'user_certification_id',
-            'certification',
-            'certification_id',
+            'certification_name',
+            'category',
             'score',
             'acquired_date',
             'expiration_date',
         ]
+    
+    def validate_certification_id(self, value):
+        if not Certification.objects.filter(certification_id=value).exists():
+            raise serializers.ValidationError("존재하지 않는 자격증입니다.")
+        return value
+
+    def validate(self, attrs):
+        request = self.context["request"]
+        user = request.user
+        cert_id = attrs.get("certification_id")
+
+        if cert_id:
+            if UserCertification.objects.filter(user=user, certification_id=cert_id).exists():
+                raise serializers.ValidationError(
+                    {"certification_id": "이미 추가된 자격증입니다."}
+                )
+
+        return attrs
 
 # 4. 북마크
 class BookmarkSerializer(serializers.ModelSerializer):
