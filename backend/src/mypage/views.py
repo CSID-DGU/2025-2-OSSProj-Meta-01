@@ -2,6 +2,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 
 from authentication.models import User
+from .exceptions import CustomExceptionHandlerMixin
 from .models import (
     Keyword, UserKeyword,
     Certification, UserCertification,
@@ -15,7 +16,7 @@ from .serializers import (
 )
 
 # 1. 사용자 개인정보
-class MyInfoView(generics.RetrieveUpdateAPIView):
+class MyInfoView(CustomExceptionHandlerMixin, generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
@@ -28,13 +29,13 @@ class MyInfoView(generics.RetrieveUpdateAPIView):
         return UserInfoSerializer
 
 # 2. 키워드
-class KeywordListView(generics.ListAPIView):
+class KeywordListView(CustomExceptionHandlerMixin, generics.ListAPIView):
     queryset = Keyword.objects.all()
     serializer_class = KeywordSerializer
     permission_classes = [IsAuthenticated]
 
 
-class MyKeywordListCreateView(generics.ListCreateAPIView):
+class MyKeywordListCreateView(CustomExceptionHandlerMixin, generics.ListCreateAPIView):
     serializer_class = UserKeywordSerializer
     permission_classes = [IsAuthenticated]
 
@@ -45,19 +46,19 @@ class MyKeywordListCreateView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 
-class MyKeywordDeleteView(generics.DestroyAPIView):
+class MyKeywordDeleteView(CustomExceptionHandlerMixin, generics.DestroyAPIView):
     queryset = UserKeyword.objects.all()
     lookup_url_kwarg = 'user_keyword_id'
     permission_classes = [IsAuthenticated]
 
 # 3. 자격증
-class CertificationListView(generics.ListAPIView):
+class CertificationListView(CustomExceptionHandlerMixin, generics.ListAPIView):
     queryset = Certification.objects.all()
     serializer_class = CertificationSerializer
     permission_classes = [IsAuthenticated]
 
 
-class MyCertificationListCreateView(generics.ListCreateAPIView):
+class MyCertificationListCreateView(CustomExceptionHandlerMixin, generics.ListCreateAPIView):
     serializer_class = UserCertificationSerializer
     permission_classes = [IsAuthenticated]
 
@@ -68,21 +69,21 @@ class MyCertificationListCreateView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 
-class MyCertificationDetailView(generics.RetrieveUpdateDestroyAPIView):
+class MyCertificationDetailView(CustomExceptionHandlerMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = UserCertification.objects.all()
     serializer_class = UserCertificationSerializer
     lookup_url_kwarg = 'user_certification_id'
     permission_classes = [IsAuthenticated]
 
 # 4. 북마크
-class MyBookmarkListView(generics.ListAPIView):
+class MyBookmarkListView(CustomExceptionHandlerMixin, generics.ListAPIView):
     serializer_class = BookmarkSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Bookmark.objects.filter(user=self.request.user)
 
-class MyBookmarkDeleteView(generics.DestroyAPIView):
+class MyBookmarkDeleteView(CustomExceptionHandlerMixin, generics.DestroyAPIView):
     permission_classes = [IsAuthenticated]
     queryset = Bookmark.objects.all()
     lookup_url_kwarg = 'bookmark_id'
