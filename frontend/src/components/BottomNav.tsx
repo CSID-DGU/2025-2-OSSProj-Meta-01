@@ -1,8 +1,6 @@
-// src/components/BottomNav.tsx
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-// ✅ 이미지 import (src/images 폴더 기준)
 import homeIcon from "../images/free-icon-home.png";
 import calendarIcon from "../images/free-icon-weekly-calendar-outline-event-interface-symbol.png";
 import userIcon from "../images/free-icon-user.png";
@@ -28,49 +26,61 @@ const iconContainer: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const iconStyle: React.CSSProperties = {
-  width: 28,
-  height: 28,
-  opacity: 0.8,
-  transition: "all 0.2s ease",
-};
-
-const activeIconStyle: React.CSSProperties = {
-  ...iconStyle,
-  opacity: 1,
-  filter: "drop-shadow(0 0 3px #4facfe)",
-  transform: "scale(1.05)",
-};
-
 export default function BottomNav() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
+  const handleLogout = async () => {
+    const access = localStorage.getItem("accessToken");
+    const refresh = localStorage.getItem("refreshToken");
+
+    if (!access || !refresh) {
+      alert("로그인 정보가 없습니다.");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/auth/logout/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access}`,
+        },
+        body: JSON.stringify({
+          refresh: refresh,
+        }),
+      });
+
+      if (response.ok) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        alert("로그아웃 완료!");
+        navigate("/login", { replace: true });
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || "로그아웃 실패");
+      }
+    } catch (error) {
+      alert("서버 연결에 문제가 발생했습니다.");
+    }
+  };
+
   return (
     <footer style={footerStyle}>
-      {/* 홈 */}
       <div style={iconContainer} onClick={() => navigate("/main")}>
         <img src={homeIcon} alt="홈" />
       </div>
 
-      {/* 캘린더 */}
       <div style={iconContainer} onClick={() => navigate("/calendar")}>
         <img src={calendarIcon} alt="캘린더" />
       </div>
 
-      {/* 프로필 */}
       <div style={iconContainer} onClick={() => navigate("/profile")}>
         <img src={userIcon} alt="프로필" />
       </div>
 
-      {/* 로그아웃 */}
-      <div
-        style={iconContainer}
-        onClick={() => {
-          localStorage.removeItem("authToken");
-          navigate("/login", { replace: true });
-        }}
-      >
+      <div style={iconContainer} onClick={handleLogout}>
         <img src={logoutIcon} alt="로그아웃" />
       </div>
     </footer>
