@@ -479,6 +479,12 @@ class CrawlTools:
         
         for scholarship_doc in scholarships:
             try:
+                # 글번호를 scholarship_id로 사용 (MongoDB 글번호 = MySQL scholarship_id)
+                scholarship_id = int(scholarship_doc.get('글번호', 0))
+                if scholarship_id == 0:
+                    print(f"글번호가 없는 문서 건너뜀: {scholarship_doc.get('_id')}")
+                    continue
+                
                 # 제목
                 scholarship_name = scholarship_doc.get('제목', '제목 없음')
                 
@@ -507,12 +513,13 @@ class CrawlTools:
                 # university_id 설정 (기본값: 동국대학교)
                 university_id = 1
                 
-                # MySQL에 삽입
+                # MySQL에 삽입 (scholarship_id 명시적 지정)
                 insert_query = """
-                INSERT INTO Scholarships (university_id, scholarship_name, start_date, end_date, url, image_url)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO Scholarships (scholarship_id, university_id, scholarship_name, start_date, end_date, url, image_url)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """
                 self.mysql_cursor.execute(insert_query, (
+                    scholarship_id,
                     university_id,
                     scholarship_name,
                     start_date.strftime('%Y-%m-%d'),
@@ -521,7 +528,6 @@ class CrawlTools:
                     image_url
                 ))
                 
-                scholarship_id = self.mysql_cursor.lastrowid
                 inserted_count += 1
                 
                 print(f"장학금 삽입 완료: {scholarship_name} (ID: {scholarship_id})")
