@@ -3,8 +3,11 @@ from bs4 import BeautifulSoup
 import requests
 import json
 import time
+import re
+from datetime import datetime
 import boto3
 from pymongo import MongoClient
+import mysql.connector
 import os
 import tempfile
 from dotenv import load_dotenv
@@ -61,6 +64,10 @@ class CrawlTools:
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
+        
+        # MySQL 연결 (선택적)
+        self.mysql_connection = None
+        self.mysql_cursor = None
     
     def crawl_pages(self, max_pages=None):
         """
@@ -385,3 +392,184 @@ class CrawlTools:
         print("=" * 60)
         
         return with_images
+    
+    def connect_mysql(self):
+        """
+        MySQL 데이터베이스에 연결합니다.
+        """
+        if self.mysql_connection is None:
+            self.mysql_connection = mysql.connector.connect(
+                host=os.getenv('MYSQL_HOST'),
+                user=os.getenv('MYSQL_USER'),
+                password=os.getenv('MYSQL_PASSWORD'),
+                port=os.getenv('MYSQL_PORT'),
+                database=os.getenv('MYSQL_DATABASE')
+            )
+            self.mysql_cursor = self.mysql_connection.cursor()
+            print("MySQL 연결 완료")
+    
+    def close_mysql(self):
+        """
+        MySQL 연결을 종료합니다.
+        """
+        if self.mysql_cursor:
+            self.mysql_cursor.close()
+        if self.mysql_connection:
+            self.mysql_connection.close()
+        print("MySQL 연결 종료")
+    
+    def parse_date(self, date_str):
+        """
+        다양한 날짜 형식을 파싱하여 datetime 객체로 변환합니다.
+        
+        Args:
+            date_str (str): 파싱할 날짜 문자열
+            
+        Returns:
+            datetime or None: 파싱된 datetime 객체 또는 None
+        """
+        if not date_str:
+            return None
+        
+        # 문자열에서 날짜 부분만 추출 (예: "2025. 11. 20.(목) 09:00" -> "2025. 11. 20.")
+        date_patterns = [
+            r'(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.',  # "2025. 11. 20." 형식
+            r'(\d{4})-(\d{1,2})-(\d{1,2})',            # "2025-11-20" 형식
+            r'(\d{4})/(\d{1,2})/(\d{1,2})',            # "2025/11/20" 형식
+        ]
+        
+        for pattern in date_patterns:
+            match = re.search(pattern, date_str)
+            if match:
+                year, month, day = match.groups()
+                try:
+                    return datetime(int(year), int(month), int(day))
+                except ValueError:
+                    continue
+        
+        return None
+    
+    def import_scholarships_to_mysql(self, source_collection='scholarships_processed', limit=None):
+        """
+        MongoDB에서 장학금 정보를 가져와 MySQL Scholarships 테이블에 삽입합니다.
+        
+        Args:
+            source_collection (str): MongoDB 소스 컬렉션 이름
+            limit (int): 가져올 문서 수 제한 (기본값: None, 전체)
+            
+        Returns:
+            int: 삽입된 장학금 수
+        """
+        print("=== MongoDB에서 MySQL로 장학금 데이터 이동 시작 ===\n")
+        
+        # MySQL 연결
+        self.connect_mysql()
+        
+        # MongoDB 연결
+        connection_string = f"mongodb://{self.mongo_config['user']}:{self.mongo_config['password']}@{self.mongo_config['host']}:{self.mongo_config['port']}/"
+        mongo_client = MongoClient(connection_string)
+        mongo_db = mongo_client[self.mongo_config['database']]
+        mongo_collection = mongo_db[source_collection]
+        
+        # MongoDB에서 데이터 가져오기
+        query = {}
+        scholarships = mongo_collection.find(query).limit(limit) if limit else mongo_collection.find(query)
+        
+        inserted_count = 0
+        
+        for scholarship_doc in scholarships:
+            try:
+                # 제목
+                scholarship_name = scholarship_doc.get('제목', '제목 없음')
+                
+                # URL
+                url = scholarship_doc.get('URL', '')
+                
+                # 이미지 URL (첫 번째 이미지만 사용)
+                image_s3_urls = scholarship_doc.get('image_s3_urls', [])
+                image_url = image_s3_urls[0] if image_s3_urls else None
+                
+                # summary에서 날짜 정보 가져오기
+                summary = scholarship_doc.get('summary', {})
+                start_date_str = summary.get('신청시작일', '')
+                end_date_str = summary.get('신청마감일', '')
+                
+                # 날짜 파싱
+                start_date = self.parse_date(start_date_str)
+                end_date = self.parse_date(end_date_str)
+                
+                # 날짜가 없으면 기본값 설정
+                if not start_date:
+                    start_date = datetime.now()
+                if not end_date:
+                    end_date = datetime(2025, 12, 31)
+                
+                # university_id 설정 (기본값: 동국대학교)
+                university_id = 1
+                
+                # MySQL에 삽입
+                insert_query = """
+                INSERT INTO Scholarships (university_id, scholarship_name, start_date, end_date, url, image_url)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                self.mysql_cursor.execute(insert_query, (
+                    university_id,
+                    scholarship_name,
+                    start_date.strftime('%Y-%m-%d'),
+                    end_date.strftime('%Y-%m-%d'),
+                    url,
+                    image_url
+                ))
+                
+                scholarship_id = self.mysql_cursor.lastrowid
+                inserted_count += 1
+                
+                print(f"장학금 삽입 완료: {scholarship_name} (ID: {scholarship_id})")
+                
+                # 키워드 연결
+                classification = scholarship_doc.get('classification', {})
+                labels = classification.get('labels', [])
+                self._link_scholarship_keywords(scholarship_id, labels)
+                
+            except Exception as e:
+                print(f"장학금 삽입 중 오류 발생: {e}")
+                continue
+        
+        self.mysql_connection.commit()
+        mongo_client.close()
+        
+        print(f"\n총 {inserted_count}개의 장학금이 MySQL에 삽입되었습니다.")
+        return inserted_count
+    
+    def _link_scholarship_keywords(self, scholarship_id, labels):
+        """
+        장학금과 키워드를 연결합니다.
+        
+        Args:
+            scholarship_id (int): 장학금 ID
+            labels (list): 키워드 레이블 리스트
+        """
+        for label in labels:
+            try:
+                # 키워드 찾기 또는 생성
+                self.mysql_cursor.execute("SELECT keyword_id FROM Keywords WHERE keyword = %s", (label,))
+                result = self.mysql_cursor.fetchone()
+                
+                if result:
+                    keyword_id = result[0]
+                else:
+                    # 키워드가 없으면 새로 생성
+                    self.mysql_cursor.execute("INSERT INTO Keywords (keyword) VALUES (%s)", (label,))
+                    keyword_id = self.mysql_cursor.lastrowid
+                
+                # ScholarshipKeywords 테이블에 연결
+                insert_query = """
+                INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+                VALUES (%s, %s)
+                ON DUPLICATE KEY UPDATE scholarship_id = scholarship_id
+                """
+                self.mysql_cursor.execute(insert_query, (scholarship_id, keyword_id))
+                
+            except mysql.connector.Error as err:
+                print(f"키워드 '{label}' 연결 중 오류: {err}")
+                continue
