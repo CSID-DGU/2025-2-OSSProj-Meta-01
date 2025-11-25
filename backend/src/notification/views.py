@@ -19,24 +19,24 @@ class MyCalendarView(CustomExceptionHandlerMixin, generics.ListAPIView):
     def get_queryset(self):
         return Bookmark.objects.filter(user=self.request.user).select_related("scholarship")
 
-class MyNotificationCreateView(CustomExceptionHandlerMixin, APIView):
+def get_user_bookmark_or_error(request, bookmark_id):
+    try:
+        bookmark = Bookmark.objects.get(
+            bookmark_id=bookmark_id,
+            user=request.user
+        )
+        return bookmark, None
+    except Bookmark.DoesNotExist:
+        return None, Response(
+            {"error": "존재하지 않는 북마크입니다."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+class MyNotificationListView(CustomExceptionHandlerMixin, APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_bookmark(self, request, bookmark_id):
-        try:
-            bookmark = Bookmark.objects.get(
-                bookmark_id=bookmark_id,
-                user=request.user
-            )
-        except Bookmark.DoesNotExist:
-            return None, Response(
-                {"error": "존재하지 않는 북마크입니다."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        return bookmark, None
-
     def get(self, request, bookmark_id):
-        bookmark, error_response = self.get_bookmark(request, bookmark_id)
+        bookmark, error_response = get_user_bookmark_or_error(request, bookmark_id)
         if error_response:
             return error_response
 
@@ -47,8 +47,11 @@ class MyNotificationCreateView(CustomExceptionHandlerMixin, APIView):
         serializer = NotificationSerializer(notifications, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class MyNotificationCreateView(CustomExceptionHandlerMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, bookmark_id):
-        bookmark, error_response = self.get_bookmark(request, bookmark_id)
+        bookmark, error_response = get_user_bookmark_or_error(request, bookmark_id)
         if error_response:
             return error_response
 
@@ -64,20 +67,20 @@ class MyNotificationCreateView(CustomExceptionHandlerMixin, APIView):
         ).order_by("notification_date")
         updated_data = NotificationSerializer(updated, many=True).data
 
-        return Response({
-            "message": "알림이 추가되었습니다.",
-            "notifications": updated_data
-        }, status=status.HTTP_200_OK)
-
+        return Response(
+            {
+                "message": "알림이 추가되었습니다.",
+                "notifications": updated_data
+            },
+            status=status.HTTP_200_OK
+        )
 
 class MyNotificationDeleteView(CustomExceptionHandlerMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, notification_id):
         try:
-            notification = Notification.objects.select_related(
-                "bookmark"
-            ).get(
+            notification = Notification.objects.select_related("bookmark").get(
                 notification_id=notification_id,
                 bookmark__user=request.user
             )
@@ -95,7 +98,10 @@ class MyNotificationDeleteView(CustomExceptionHandlerMixin, APIView):
         ).order_by("notification_date")
         updated_data = NotificationSerializer(updated, many=True).data
 
-        return Response({
-            "message": "알림이 삭제되었습니다.",
-            "notifications": updated_data
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "message": "알림이 삭제되었습니다.",
+                "notifications": updated_data
+            },
+            status=status.HTTP_200_OK
+        )

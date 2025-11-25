@@ -2,7 +2,6 @@ from rest_framework import serializers
 from .models import Notification
 from mypage.models import Bookmark
 
-
 class CalendarSerializer(serializers.ModelSerializer):
     scholarship_id = serializers.IntegerField(
         source="scholarship.scholarship_id",
@@ -26,12 +25,29 @@ class CalendarSerializer(serializers.ModelSerializer):
             "end_date",
         ]
 
-
 class NotificationSerializer(serializers.ModelSerializer):
+    scholarship_id = serializers.IntegerField(
+        source="bookmark.scholarship.scholarship_id",
+        read_only=True
+    )
+    scholarship_name = serializers.CharField(
+        source="bookmark.scholarship.scholarship_name",
+        read_only=True
+    )
+    end_date = serializers.DateField(
+        source="bookmark.scholarship.end_date",
+        read_only=True
+    )
+
     class Meta:
         model = Notification
-        fields = ["notification_id", "notification_date"]
-
+        fields = [
+            "notification_id",
+            "notification_date",
+            "scholarship_id",
+            "scholarship_name",
+            "end_date",
+        ]
 
 class NotificationCreateSerializer(serializers.ModelSerializer):
     notification_date = serializers.IntegerField(

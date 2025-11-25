@@ -53,8 +53,7 @@ def run_notification_job():
         if notify_day == today:
             text = (
                 f"[장학금 알림]\n"
-                f"'{scholarship.scholarship_name}' 장학금 마감이 "
-                f"D-{d}입니다.\n"
+                f"'{scholarship.scholarship_name}' 장학금 마감이 {d}일 남았습니다.\n"
                 f"(마감일: {end_date})"
             )
             send_sms(user.phone, text)

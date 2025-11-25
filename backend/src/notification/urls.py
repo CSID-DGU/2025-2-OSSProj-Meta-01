@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     MyCalendarView,
+    MyNotificationListView,
     MyNotificationCreateView,
     MyNotificationDeleteView,
 )
@@ -8,8 +9,9 @@ from .views import (
 app_name = "notification"
 
 urlpatterns = [
-    path("users/<user_id>/calendar/", MyCalendarView.as_view(), name="my-calendar"),
+    path("calendar/", MyCalendarView.as_view(), name="my_calendar"),
 
-    path("bookmarks/<int:bookmark_id>/notifications/", MyNotificationCreateView.as_view(), name="my-notification-list-create"),
-    path("notifications/<int:notification_id>/", MyNotificationDeleteView.as_view(), name="my-notification-delete"),
+    path("bookmarks/<int:bookmark_id>/notifications/", MyNotificationListView.as_view(), name="my_notifications"),
+    path("bookmarks/<int:bookmark_id>/notifications/add/", MyNotificationCreateView.as_view(), name="add_my_notification"),
+    path("notifications/<int:notification_id>/", MyNotificationDeleteView.as_view(), name="delete_my_notification"),
 ]
