@@ -4,7 +4,7 @@ import logo from "../images/logo.png";
 
 const SignupStep2: React.FC = () => {
   const navigate = useNavigate();
-  const { state } = useLocation(); // Step1 데이터
+  const { state } = useLocation();
 
   const [agree, setAgree] = useState(false);
   const [channel, setChannel] = useState("");
@@ -43,7 +43,6 @@ const SignupStep2: React.FC = () => {
       income_level: state.income_level,
       receive_notifications: agree,
 
-      // Step2 정보
       notification_channel: channel,
       university: university,
     };
@@ -87,8 +86,6 @@ const SignupStep2: React.FC = () => {
           }}
         />
         <h2 style={{ marginBottom: "1.5rem", color: "#333" }}>회원가입</h2>
-
-        {/* 선택 동의 체크박스 */}
         <div style={{ marginBottom: "1.5rem", textAlign: "left" }}>
           <label style={{ fontSize: "0.9rem", color: "#333" }}>
             <input
@@ -101,7 +98,6 @@ const SignupStep2: React.FC = () => {
           </label>
         </div>
 
-        {/* 🔥 필수 채널 선택 */}
         <label style={labelStyle}>
           <span style={required}>필수</span> 알림 수신 채널
         </label>
@@ -115,7 +111,6 @@ const SignupStep2: React.FC = () => {
         </select>
         {errors.channel && <p style={errorText}>{errors.channel}</p>}
 
-        {/* 🔥 필수 대학교 선택 */}
         <label style={labelStyle}>
           <span style={required}>필수</span> 대학교 선택
         </label>
@@ -138,9 +133,7 @@ const SignupStep2: React.FC = () => {
 
           <button
             style={backButtonStyle}
-            onClick={
-              () => navigate("/signup", { state: state }) // 1단계에서 받은 state 그대로 전달
-            }
+            onClick={() => navigate("/signup", { state: state })}
           >
             이전 단계
           </button>
@@ -164,7 +157,6 @@ const SignupStep2: React.FC = () => {
   );
 };
 
-/* 스타일 */
 const containerStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "center",

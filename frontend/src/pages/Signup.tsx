@@ -4,9 +4,8 @@ import logo from "../images/logo.png";
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
-  const { state } = useLocation(); // Step2 → Step1 에서 전달된 state
+  const { state } = useLocation();
 
-  // Step1 입력값을 state 기반으로 초기화(되돌아왔을 때 값 유지됨)
   const [id, setId] = useState(state?.id || "");
   const [password, setPassword] = useState(state?.password || "");
   const [userName, setUserName] = useState(state?.user_name || "");
@@ -65,7 +64,6 @@ const Signup: React.FC = () => {
       signupData.income_level = incomeLevel;
     }
 
-    // ★ replace 제거 (state 날아가는 문제 해결)
     navigate("/signup-step2", { state: signupData });
   };
 

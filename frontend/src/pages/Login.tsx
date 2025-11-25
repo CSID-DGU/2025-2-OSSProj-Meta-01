@@ -15,15 +15,14 @@ const Login: React.FC = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id: studentId, // ✔️ 백엔드 스펙에 맞게 수정
-          password: password, // ✔️ 그대로 OK
+          id: studentId,
+          password: password,
         }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // ⚠️ 백엔드가 주는 키 이름 반드시 확인 (access / refresh)
         localStorage.setItem("accessToken", data.access);
         localStorage.setItem("refreshToken", data.refresh);
 
