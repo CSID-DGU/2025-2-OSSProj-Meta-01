@@ -41,9 +41,17 @@ class MyKeywordListView(CustomExceptionHandlerMixin, APIView):
 
     def get(self, request):
         keywords = UserKeyword.objects.filter(user=request.user)
-        keyword_names = [uk.keyword.keyword for uk in keywords]
-        return Response(keyword_names)
 
+        data = [
+            {
+                "user_keyword_id": uk.user_keyword_id,
+                "keyword_id": uk.keyword.keyword_id,
+                "keyword": uk.keyword.keyword
+            }
+            for uk in keywords
+        ]
+
+        return Response(data)
 
 class MyKeywordCreateView(CustomExceptionHandlerMixin, APIView):
     permission_classes = [IsAuthenticated]
@@ -55,10 +63,14 @@ class MyKeywordCreateView(CustomExceptionHandlerMixin, APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user)
 
-        updated_keywords = list(
-            UserKeyword.objects.filter(user=request.user)
-            .values_list('keyword__keyword', flat=True)
-        )
+        updated_keywords = [
+            {
+                "user_keyword_id": uk.user_keyword_id,
+                "keyword_id": uk.keyword.keyword_id,
+                "keyword": uk.keyword.keyword
+            }
+            for uk in UserKeyword.objects.filter(user=request.user)
+        ]
 
         return Response({
             "message": "키워드가 추가되었습니다.",
@@ -83,10 +95,14 @@ class MyKeywordDeleteView(CustomExceptionHandlerMixin, APIView):
 
         user_keyword.delete()
 
-        updated_keywords = list(
-            UserKeyword.objects.filter(user=request.user)
-            .values_list('keyword__keyword', flat=True)
-        )
+        updated_keywords = [
+            {
+                "user_keyword_id": uk.user_keyword_id,
+                "keyword_id": uk.keyword.keyword_id,
+                "keyword": uk.keyword.keyword
+            }
+            for uk in UserKeyword.objects.filter(user=request.user)
+        ]
 
         return Response({
             "message": "키워드가 삭제되었습니다.",
