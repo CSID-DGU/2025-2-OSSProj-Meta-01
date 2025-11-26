@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -205,23 +206,42 @@ class DataPipeline:
                             text = str(parsed)
                         combined_content += f"\n\n[이미지 내용]\n{text}"
             
-            # OpenAI로 분류
-            try:
-                classification = self.classifier.classify_content(combined_content)
-                doc['classification'] = classification
-            except Exception as e:
-                print(f"    ⚠ 분류 실패: {e}")
-                doc['classification'] = None
-                doc['classification_error'] = str(e)
+            # OpenAI로 분류 (재시도 포함)
+            classification_retry_count = 0
+            max_retries = 2  # 최대 재시도 횟수
+            while classification_retry_count < max_retries:
+                try:
+                    classification = self.classifier.classify_content(combined_content)
+                    doc['classification'] = classification
+                    break
+                except Exception as e:
+                    classification_retry_count += 1
+                    if classification_retry_count < max_retries:
+                        print(f"    ⚠ 분류 실패 ({classification_retry_count}/{max_retries}): {e}")
+                        print(f"    ⏳ 60초 대기 후 재시도...")
+                        time.sleep(60)
+                    else:
+                        print(f"    ❌ 분류 최종 실패: {e}")
+                        doc['classification'] = None
+                        doc['classification_error'] = str(e)
             
-            # OpenAI로 요약
-            try:
-                summary = self.summarizer.summarize_content(combined_content)
-                doc['summary'] = summary
-            except Exception as e:
-                print(f"    ⚠ 요약 실패: {e}")
-                doc['summary'] = None
-                doc['summary_error'] = str(e)
+            # OpenAI로 요약 (재시도 포함)
+            summary_retry_count = 0
+            while summary_retry_count < max_retries:
+                try:
+                    summary = self.summarizer.summarize_content(combined_content)
+                    doc['summary'] = summary
+                    break
+                except Exception as e:
+                    summary_retry_count += 1
+                    if summary_retry_count < max_retries:
+                        print(f"    ⚠ 요약 실패 ({summary_retry_count}/{max_retries}): {e}")
+                        print(f"    ⏳ 60초 대기 후 재시도...")
+                        time.sleep(60)
+                    else:
+                        print(f"    ❌ 요약 최종 실패: {e}")
+                        doc['summary'] = None
+                        doc['summary_error'] = str(e)
             
             return doc
         
@@ -297,11 +317,18 @@ class DataPipeline:
             # 단계 5: 처리된 데이터 저장
             count = self.step5_save_processed_data(documents)
             
+            # 단계 6: MySQL로 데이터 이동
+            print("\n" + "=" * 80)
+            print("단계 6: MySQL로 장학금 데이터 이동")
+            print("=" * 80)
+            mysql_count = self.crawler.import_scholarships_to_mysql(source_collection='scholarships_processed')
+            
             elapsed = time.time() - start_time
             
             print("\n" + "=" * 80)
             print("파이프라인 완료!")
             print(f"총 처리: {count}개 문서")
+            print(f"MySQL 저장: {mysql_count}개")
             print(f"총 소요 시간: {elapsed:.2f}초")
             print("=" * 80)
             
@@ -310,8 +337,10 @@ class DataPipeline:
             import traceback
             traceback.print_exc()
         finally:
-            # MongoDB 연결 종료
+            # 연결 종료
             self.client.close()
+            if hasattr(self.crawler, 'mysql_connection') and self.crawler.mysql_connection:
+                self.crawler.close_mysql()
     
     def run_pipeline_from_existing_data(self):
         """
@@ -342,11 +371,18 @@ class DataPipeline:
             # 단계 5: 처리된 데이터 저장
             count = self.step5_save_processed_data(documents)
             
+            # 단계 6: MySQL로 데이터 이동
+            print("\n" + "=" * 80)
+            print("단계 6: MySQL로 장학금 데이터 이동")
+            print("=" * 80)
+            mysql_count = self.crawler.import_scholarships_to_mysql(source_collection='scholarships_processed')
+            
             elapsed = time.time() - start_time
             
             print("\n" + "=" * 80)
             print("파이프라인 완료!")
             print(f"총 처리: {count}개 문서")
+            print(f"MySQL 저장: {mysql_count}개")
             print(f"총 소요 시간: {elapsed:.2f}초")
             print("=" * 80)
             
@@ -355,8 +391,10 @@ class DataPipeline:
             import traceback
             traceback.print_exc()
         finally:
-            # MongoDB 연결 종료
+            # 연결 종료
             self.client.close()
+            if hasattr(self.crawler, 'mysql_connection') and self.crawler.mysql_connection:
+                self.crawler.close_mysql()
 
 
 if __name__ == "__main__":
@@ -364,7 +402,7 @@ if __name__ == "__main__":
     pipeline = DataPipeline()
     
     # 옵션 1: 전체 파이프라인 실행 (크롤링 포함)
-    # pipeline.run_full_pipeline(max_pages=1)  # 1페이지만 테스트
+    pipeline.run_full_pipeline(max_pages=10)  # 1페이지만 테스트
     
     # 옵션 2: 기존 데이터로 파이프라인 실행 (크롤링 제외)
-    pipeline.run_pipeline_from_existing_data()
+    # pipeline.run_pipeline_from_existing_data()

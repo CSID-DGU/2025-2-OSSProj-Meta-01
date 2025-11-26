@@ -1,22 +1,76 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../images/logo.png";
 
 const SignupStep2: React.FC = () => {
   const navigate = useNavigate();
+  const { state } = useLocation();
+
   const [agree, setAgree] = useState(false);
   const [channel, setChannel] = useState("");
   const [university, setUniversity] = useState("");
 
-  const handleSignup = () => {
-    if (!agree || !channel || !university) {
-      alert("필수 항목을 모두 입력해주세요.");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateFields = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!channel.trim()) newErrors.channel = "알림 수신 채널을 선택해주세요.";
+    if (!university.trim()) newErrors.university = "대학교를 선택해주세요.";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSignup = async () => {
+    if (!state) {
+      alert("회원가입 정보가 누락되었습니다. 처음부터 다시 입력해주세요.");
+      navigate("/signup");
       return;
     }
 
-    alert("회원가입이 완료되었습니다!");
-    navigate("/login");
+    if (!validateFields()) return;
+
+    const finalData = {
+      id: state.id,
+      password: state.password,
+      user_name: state.user_name,
+      phone: state.phone,
+      email: state.email,
+      major: state.major,
+      year: state.year,
+      gpa: state.gpa,
+      income_level: state.income_level,
+      receive_notifications: agree,
+
+      notification_channel: channel,
+      university: university,
+    };
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/auth/signup/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(finalData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("회원가입이 완료되었습니다!");
+        navigate("/login");
+      } else {
+        alert(JSON.stringify(data) || "회원가입에 실패했습니다.");
+      }
+    } catch (error) {
+      alert("서버와 연결할 수 없습니다.");
+    }
   };
+
+  const selectWithError = (field: string) => ({
+    ...selectStyle,
+    border: errors[field] ? "1px solid red" : "1px solid #ccc",
+  });
 
   return (
     <div style={containerStyle}>
@@ -32,7 +86,6 @@ const SignupStep2: React.FC = () => {
           }}
         />
         <h2 style={{ marginBottom: "1.5rem", color: "#333" }}>회원가입</h2>
-
         <div style={{ marginBottom: "1.5rem", textAlign: "left" }}>
           <label style={{ fontSize: "0.9rem", color: "#333" }}>
             <input
@@ -51,12 +104,12 @@ const SignupStep2: React.FC = () => {
         <select
           value={channel}
           onChange={(e) => setChannel(e.target.value)}
-          style={selectStyle}
+          style={selectWithError("channel")}
         >
           <option value="">채널을 선택하세요</option>
           <option value="sms">문자</option>
-          {/* <option value="email">이메일</option> */}
         </select>
+        {errors.channel && <p style={errorText}>{errors.channel}</p>}
 
         <label style={labelStyle}>
           <span style={required}>필수</span> 대학교 선택
@@ -64,20 +117,24 @@ const SignupStep2: React.FC = () => {
         <select
           value={university}
           onChange={(e) => setUniversity(e.target.value)}
-          style={selectStyle}
+          style={selectWithError("university")}
         >
           <option value="">학교를 선택하세요</option>
           <option value="dongguk">동국대학교</option>
           <option value="snu">서울대학교</option>
           <option value="yonsei">연세대학교</option>
         </select>
+        {errors.university && <p style={errorText}>{errors.university}</p>}
 
         <div style={{ marginTop: "1.5rem" }}>
           <button style={buttonStyle} onClick={handleSignup}>
             가입하기
           </button>
 
-          <button style={backButtonStyle} onClick={() => navigate("/signup")}>
+          <button
+            style={backButtonStyle}
+            onClick={() => navigate("/signup", { state: state })}
+          >
             이전 단계
           </button>
         </div>
@@ -153,12 +210,19 @@ const required: React.CSSProperties = {
 const selectStyle: React.CSSProperties = {
   width: "100%",
   padding: "10px",
-  marginBottom: "1rem",
+  marginBottom: "0.4rem",
   borderRadius: "8px",
   border: "1px solid #ccc",
   backgroundColor: "#fff",
   outline: "none",
   color: "#333",
+};
+
+const errorText: React.CSSProperties = {
+  color: "red",
+  fontSize: "0.75rem",
+  textAlign: "left",
+  marginBottom: "0.8rem",
 };
 
 const buttonStyle: React.CSSProperties = {
