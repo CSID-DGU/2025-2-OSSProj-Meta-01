@@ -35,27 +35,27 @@ class CreateDummies:
         # Faker 인스턴스 생성 (한국어)
         self.fake = Faker('ko_KR')
         
-        # 전공 ID 목록 (하드코딩) - 63개
-        self.major_ids = list(range(1, 5))
+        # # 전공 ID 목록 (하드코딩) - 63개
+        # self.major_ids = list(range(1, 5))
         
-        # 키워드 ID 목록 (하드코딩) - 14개
-        self.keyword_ids = list(range(1, 6))
+        # # 키워드 ID 목록 (하드코딩) - 14개
+        # self.keyword_ids = list(range(1, 6))
         
-        # 자격증 ID 목록 (하드코딩)
-        self.certification_ids = list(range(1, 7))
+        # # 자격증 ID 목록 (하드코딩)
+        # self.certification_ids = list(range(1, 7))
         
-        # # SQL에서 가져오는 코드 (주석처리)
-        # # 전공 ID 목록 가져오기
-        # self.cursor.execute("SELECT major_id FROM Majors")
-        # self.major_ids = [row[0] for row in self.cursor.fetchall()]
-        # 
-        # # 키워드 ID 목록 가져오기
-        # self.cursor.execute("SELECT keyword_id FROM Keywords")
-        # self.keyword_ids = [row[0] for row in self.cursor.fetchall()]
-        # 
-        # # 자격증 ID 목록 가져오기
-        # self.cursor.execute("SELECT certification_id FROM Certifications")
-        # self.certification_ids = [row[0] for row in self.cursor.fetchall()]
+        # SQL에서 가져오는 코드 (주석처리)
+        # 전공 ID 목록 가져오기
+        self.cursor.execute("SELECT major_id FROM Majors")
+        self.major_ids = [row[0] for row in self.cursor.fetchall()]
+        
+        # 키워드 ID 목록 가져오기
+        self.cursor.execute("SELECT keyword_id FROM Keywords")
+        self.keyword_ids = [row[0] for row in self.cursor.fetchall()]
+        
+        # 자격증 ID 목록 가져오기
+        self.cursor.execute("SELECT certification_id FROM Certifications")
+        self.certification_ids = [row[0] for row in self.cursor.fetchall()]
         
     def create_users(self, num_users=10):
         """
