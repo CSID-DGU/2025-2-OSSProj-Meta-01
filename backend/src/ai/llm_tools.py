@@ -15,6 +15,7 @@ class LLMClassificationResponse(BaseModel):
     labels: list[str] = Field(description="장학금 공지사항을 분류하는 라벨 리스트")
     
 class LLMSummaryResponse(BaseModel):
+    주최기관: str = Field(description="장학금을 주최/시행하는 기관명 (예: 동국대학교, 한국장학재단, 삼성전자 등)")
     신청시작일: str = Field(description="장학금 신청 시작일")
     신청마감일: str = Field(description="장학금 신청 마감일")
     신청방법: str = Field(description="장학금 신청 방법")
@@ -30,17 +31,33 @@ class LLMSummaryTool:
     
     def summarize_content(self, content):
         logger.debug("장학금 요약 시작")
+        system_prompt = """당신은 장학금 공지사항을 요약하는 전문가입니다.
+
+다음 정보를 추출하세요:
+1. 주최기관: 장학금을 주최/시행하는 기관명
+   - 문의처, 접수처, 시행기관 등에서 파악
+   - 예: "한국장학재단", "삼성전자", "이천시", "동국대학교" 등
+   - 대학교 내부 장학금이면 해당 대학교 이름 사용
+   - 알 수 없으면 "미상"으로 표시
+2. 신청 시작일
+3. 신청 마감일
+4. 신청방법
+5. 신청대상
+6. 신청기준
+7. 혜택
+8. 문의방법
+"""
         try:
             completion = self.client.beta.chat.completions.parse(
                 model="gpt-4o-mini-2024-07-18",
                 messages=[
-                    {"role": "system", "content": "당신은 장학금 공지사항을 요약하는 전문가입니다. 신청 시작일, 신청 마감일, 신청방법, 신청대상, 신청기준, 혜택, 문의방법을 추출하세요."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": content}
                 ],
                 response_format=LLMSummaryResponse
             )
             result = completion.choices[0].message.parsed.model_dump()
-            logger.debug("장학금 요약 완료")
+            logger.debug(f"장학금 요약 완료 (주최기관: {result.get('주최기관', '미상')})")
             return result
         except Exception as e:
             logger.error(f"장학금 요약 실패: {e}")
