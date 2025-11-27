@@ -44,9 +44,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from crawler.crawl_tools import CrawlTools
+from crawler.dreamspon_crawler import DreamsponCrawler
 from ai.parsing_tools import ParsingTools
 from ai.llm_tools import LLMSummaryTool, LLMClassificationTool
 from ai.create_user_dummies import CreateDummies
+
+# 지원하는 크롤러 소스
+CRAWLER_SOURCES = {
+    'dongguk': CrawlTools,
+    'dreamspon': DreamsponCrawler
+}
 
 load_dotenv()
 
@@ -73,10 +80,14 @@ class InitialSetupPipeline:
     초기 데이터 설정 파이프라인
     
     크롤링, AI 처리, MySQL 동기화, 더미 데이터 생성을 순차적으로 실행합니다.
+    다중 소스 지원: dongguk, dreamspon, all
     """
     
     def __init__(self):
-        """파이프라인 초기화"""
+        """
+        파이프라인 초기화
+        
+        """
         self.logger = logging.getLogger('pipeline.initial_setup')
         
         # MongoDB 설정
@@ -88,8 +99,24 @@ class InitialSetupPipeline:
             'database': os.getenv('MONGO_DATABASE', 'dongguk_db')
         }
         
-        # 크롤러 초기화
-        self.crawler = CrawlTools(mongo_config=self.mongo_config)
+        # 크롤러 초기화 (항상 모든 소스)
+        self.crawlers = {}
+        for name, crawler_class in CRAWLER_SOURCES.items():
+            try:
+                self.crawlers[name] = crawler_class(mongo_config=self.mongo_config)
+                self.logger.info(f"크롤러 초기화 완료: {name}")
+            except Exception as e:
+                self.logger.warning(f"크롤러 초기화 실패 ({name}): {e}")
+        
+        # 기본 크롤러 설정 (MySQL 동기화용 - CrawlTools 사용)
+        # DreamsponCrawler는 import_scholarships_to_mysql 메소드가 없으므로
+        # MySQL 동기화를 위해 CrawlTools 인스턴스를 별도로 생성
+        self.crawler = self.crawlers.get('dongguk')
+        if not self.crawler:
+            # dongguk 크롤러가 없으면 MySQL 동기화용으로 CrawlTools 생성
+            self.mysql_sync_crawler = CrawlTools(mongo_config=self.mongo_config)
+        else:
+            self.mysql_sync_crawler = self.crawler
         
         # 파싱 도구 초기화
         self.parser = ParsingTools()
@@ -160,12 +187,24 @@ class InitialSetupPipeline:
         return count
     
     def _step1_crawl(self, max_pages=None):
-        """Step 1: 크롤링"""
-        self._print_step_header(1, "크롤링 (동국대 장학금 페이지)")
+        """Step 1: 크롤링 (다중 소스 지원)"""
+        sources_str = ', '.join(self.crawlers.keys()) if self.crawlers else 'none'
+        self._print_step_header(1, f"크롤링 ({sources_str})")
         
-        results = self.crawler.run_pipeline(max_pages=max_pages)
-        self.logger.info(f"크롤링 완료: {len(results)}개 문서를 MongoDB에 저장")
-        return len(results)
+        total_results = 0
+        
+        for name, crawler in self.crawlers.items():
+            try:
+                self.logger.info(f"--- {name} 크롤링 시작 ---")
+                results = crawler.run_pipeline(max_pages=max_pages)
+                total_results += len(results)
+                self.logger.info(f"--- {name} 크롤링 완료: {len(results)}개 문서 ---")
+            except Exception as e:
+                self.logger.error(f"{name} 크롤링 실패: {e}")
+                continue
+        
+        self.logger.info(f"전체 크롤링 완료: {total_results}개 문서를 MongoDB에 저장")
+        return total_results
     
     def _step2_read_from_mongodb(self):
         """Step 2: MongoDB에서 데이터 읽기"""
@@ -359,7 +398,8 @@ class InitialSetupPipeline:
         self._print_phase_header(2, "MySQL 장학금 데이터 동기화")
         self._print_step_header(6, "MongoDB → MySQL Scholarships")
         
-        count = self.crawler.import_scholarships_to_mysql(source_collection='scholarships_processed')
+        # MySQL 동기화용 크롤러 사용 (CrawlTools)
+        count = self.mysql_sync_crawler.import_scholarships_to_mysql(source_collection='scholarships_processed')
         
         self.logger.info(f"Phase 2 완료: MySQL에 {count}개 장학금 저장됨")
         return count
@@ -398,7 +438,7 @@ class InitialSetupPipeline:
     # 전체 파이프라인 실행
     # =========================================================================
     
-    def run(self, max_pages=None, num_users=100, skip_crawl=False):
+    def run(self, max_pages=1, num_users=100, skip_crawl=False):
         """
         전체 파이프라인 실행
         
@@ -464,7 +504,7 @@ class InitialSetupPipeline:
         finally:
             self.close()
     
-    def run_single_phase(self, phase, max_pages=None, num_users=100):
+    def run_single_phase(self, phase, max_pages=1, num_users=100):
         """
         특정 Phase만 실행
         
@@ -510,8 +550,9 @@ class InitialSetupPipeline:
     def close(self):
         """리소스 정리"""
         self.client.close()
-        if hasattr(self.crawler, 'mysql_connection') and self.crawler.mysql_connection:
-            self.crawler.close_mysql()
+        # MySQL 동기화 크롤러의 MySQL 연결 종료
+        if hasattr(self.mysql_sync_crawler, 'mysql_connection') and self.mysql_sync_crawler.mysql_connection:
+            self.mysql_sync_crawler.close_mysql()
         self.logger.info("리소스 정리 완료")
 
 
@@ -522,12 +563,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 예시:
-  python -m pipeline.initial_setup                    # 전체 실행
-  python -m pipeline.initial_setup --max-pages 5      # 5페이지만 크롤링
-  python -m pipeline.initial_setup --num-users 50     # 더미 유저 50명
-  python -m pipeline.initial_setup --skip-crawl       # 크롤링 건너뛰기
-  python -m pipeline.initial_setup --only-phase 2     # Phase 2만 실행 (MySQL 동기화)
-  python -m pipeline.initial_setup --only-phase 3     # Phase 3만 실행 (더미 데이터)
+  python -m pipeline.initial_setup                 # 동국대 + Dreamspon 전체 실행
+  python -m pipeline.initial_setup --max-pages 3   # 각 소스 3페이지만 크롤링
+  python -m pipeline.initial_setup --num-users 50  # 더미 유저 50명
+  python -m pipeline.initial_setup --skip-crawl    # 크롤링 건너뛰기
+  python -m pipeline.initial_setup --only-phase 2  # Phase 2만 실행 (MySQL 동기화)
+  python -m pipeline.initial_setup --only-phase 3  # Phase 3만 실행 (더미 데이터)
 
 Phase 설명:
   Phase 1: 크롤링 및 AI 처리 (MongoDB)
@@ -542,8 +583,8 @@ Phase 설명:
     parser.add_argument(
         '--max-pages', 
         type=int, 
-        default=None,
-        help='크롤링할 최대 페이지 수 (기본값: 전체)'
+        default=1,
+        help='각 소스에서 크롤링할 최대 페이지 수 (기본값: 1)'
     )
     parser.add_argument(
         '--num-users', 
