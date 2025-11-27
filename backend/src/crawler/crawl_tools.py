@@ -455,6 +455,7 @@ class CrawlTools:
     def import_scholarships_to_mysql(self, source_collection='scholarships_processed', limit=None):
         """
         MongoDB에서 장학금 정보를 가져와 MySQL Scholarships 테이블에 삽입합니다.
+        주최기관(organization)을 파악하여 적절한 university_id 또는 organization_id를 설정합니다.
         
         Args:
             source_collection (str): MongoDB 소스 컬렉션 이름
@@ -479,6 +480,7 @@ class CrawlTools:
         scholarships = mongo_collection.find(query).limit(limit) if limit else mongo_collection.find(query)
         
         inserted_count = 0
+        org_created_count = 0
         
         for scholarship_doc in scholarships:
             try:
@@ -498,10 +500,11 @@ class CrawlTools:
                 image_s3_urls = scholarship_doc.get('image_s3_urls', [])
                 image_url = image_s3_urls[0] if image_s3_urls else None
                 
-                # summary에서 날짜 정보 가져오기
+                # summary에서 날짜 및 주최기관 정보 가져오기
                 summary = scholarship_doc.get('summary', {})
                 start_date_str = summary.get('신청시작일', '')
                 end_date_str = summary.get('신청마감일', '')
+                organization_name = summary.get('주최기관', '')
                 
                 # 날짜 파싱
                 start_date = self.parse_date(start_date_str)
@@ -513,17 +516,34 @@ class CrawlTools:
                 if not end_date:
                     end_date = datetime(2025, 12, 31)
                 
-                # university_id 설정 (기본값: 동국대학교)
-                university_id = 1
+                # 주최기관에 따라 university_id / organization_id 결정
+                university_id = None
+                organization_id = None
+                
+                # 동국대학교 관련 키워드 확인
+                dongguk_keywords = ['동국대', '동국대학교', 'dongguk']
+                is_dongguk = any(kw in organization_name.lower() for kw in dongguk_keywords) if organization_name else False
+                
+                if is_dongguk or not organization_name or organization_name in ['미상', '']:
+                    # 동국대학교 또는 주최기관 미상인 경우
+                    university_id = 1  # 동국대학교
+                    organization_id = None
+                else:
+                    # 외부 기관인 경우
+                    university_id = None
+                    organization_id = self._get_or_create_organization(organization_name)
+                    if organization_id:
+                        org_created_count += 1
                 
                 # MySQL에 삽입 (scholarship_id 명시적 지정)
                 insert_query = """
-                INSERT INTO Scholarships (scholarship_id, university_id, scholarship_name, start_date, end_date, url, image_url)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO Scholarships (scholarship_id, university_id, organization_id, scholarship_name, start_date, end_date, url, image_url)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 self.mysql_cursor.execute(insert_query, (
                     scholarship_id,
                     university_id,
+                    organization_id,
                     scholarship_name,
                     start_date.strftime('%Y-%m-%d'),
                     end_date.strftime('%Y-%m-%d'),
@@ -533,7 +553,8 @@ class CrawlTools:
                 
                 inserted_count += 1
                 
-                logger.debug(f"장학금 삽입 완료: {scholarship_name} (ID: {scholarship_id})")
+                org_info = f"university_id={university_id}" if university_id else f"organization_id={organization_id} ({organization_name})"
+                logger.debug(f"장학금 삽입 완료: {scholarship_name} (ID: {scholarship_id}, {org_info})")
                 
                 # 키워드 연결
                 classification = scholarship_doc.get('classification', {})
@@ -547,8 +568,42 @@ class CrawlTools:
         self.mysql_connection.commit()
         mongo_client.close()
         
-        logger.info(f"MySQL 장학금 삽입 완료: {inserted_count}개")
+        logger.info(f"MySQL 장학금 삽입 완료: {inserted_count}개 (새 기관: {org_created_count}개)")
         return inserted_count
+    
+    def _get_or_create_organization(self, organization_name):
+        """
+        Organizations 테이블에서 기관을 찾거나 새로 생성합니다.
+        
+        Args:
+            organization_name (str): 기관명
+            
+        Returns:
+            int: organization_id
+        """
+        try:
+            # 먼저 기존 기관 검색
+            self.mysql_cursor.execute(
+                "SELECT organization_id FROM Organizations WHERE organization_name = %s",
+                (organization_name,)
+            )
+            result = self.mysql_cursor.fetchone()
+            
+            if result:
+                return result[0]
+            
+            # 기관이 없으면 새로 생성
+            self.mysql_cursor.execute(
+                "INSERT INTO Organizations (organization_name) VALUES (%s)",
+                (organization_name,)
+            )
+            new_id = self.mysql_cursor.lastrowid
+            logger.info(f"새 기관 추가: {organization_name} (ID: {new_id})")
+            return new_id
+            
+        except mysql.connector.Error as err:
+            logger.error(f"기관 '{organization_name}' 처리 중 오류: {err}")
+            return None
     
     def _link_scholarship_keywords(self, scholarship_id, labels):
         """
