@@ -1,4 +1,6 @@
 import os
+import io
+import zipfile
 import logging
 from dotenv import load_dotenv
 import boto3
@@ -9,7 +11,28 @@ load_dotenv()
 # 로거 설정
 logger = logging.getLogger('ai.parsing_tools')
 
+
 class ParsingTools:
+    """
+    파싱 도구 클래스
+    
+    S3에서 파일을 다운로드하고 Upstage API로 파싱합니다.
+    ZIP 파일의 경우 최대 3단계까지 중첩 탐색하여 내부 파일들을 개별 파싱합니다.
+    """
+    
+    # 지원하는 파일 확장자
+    SUPPORTED_EXTENSIONS = {
+        '.hwp', '.pdf', '.docx', '.doc', 
+        '.xlsx', '.xls', '.pptx', '.ppt',
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp'
+    }
+    
+    # ZIP 최대 중첩 깊이
+    MAX_ZIP_DEPTH = 3
+    
+    # 최대 파일 크기 (50MB)
+    MAX_FILE_SIZE = 50 * 1024 * 1024
+    
     def __init__(self):
         # Upstage
         self.upstage_api_key = os.getenv('UPSTAGE_API_KEY')
@@ -27,22 +50,208 @@ class ParsingTools:
         )
     
     def parse_image_to_content(self, image):
-        """이미지 파일을 S3에서 가져와서 Upstage로 파싱"""
+        """
+        이미지 파일을 S3에서 가져와서 Upstage로 파싱
+        
+        Args:
+            image: S3 key (예: 'images/123_0.jpg')
+            
+        Returns:
+            list: 파싱된 파일 리스트
+                [{'s3_url': ..., 's3_key': ..., 'parsed_content': ...}]
+        """
         logger.debug(f"이미지 파싱 시작: {image}")
-        file_content = self.s3.get_object(Bucket=self.bucket_name, Key=image)['Body'].read()
-        filename = image.split('/')[-1]  # 파일명 추출
-        result = self._upstage_parse(file_content, filename)
-        logger.debug(f"이미지 파싱 완료: {image}")
-        return result
+        base_url = f"https://{self.bucket_name}.s3.ap-northeast-2.amazonaws.com/{image}"
+        
+        try:
+            file_content = self.s3.get_object(Bucket=self.bucket_name, Key=image)['Body'].read()
+            filename = image.split('/')[-1]
+            parsed = self._upstage_parse(file_content, filename)
+            
+            logger.debug(f"이미지 파싱 완료: {image}")
+            return [{
+                's3_url': base_url,
+                's3_key': image,
+                'parsed_content': parsed
+            }]
+        except Exception as e:
+            logger.error(f"이미지 파싱 실패 ({image}): {e}")
+            return [{
+                's3_url': base_url,
+                's3_key': image,
+                'parsed_content': None,
+                'error': str(e)
+            }]
     
     def parse_attachment_to_content(self, attachment):
-        """첨부파일을 S3에서 가져와서 Upstage로 파싱"""
+        """
+        첨부파일을 S3에서 가져와서 Upstage로 파싱 (ZIP 파일 지원)
+        
+        Args:
+            attachment: S3 key (예: 'attachments/123_서류.zip')
+            
+        Returns:
+            list: 파싱된 파일 리스트
+                [{'s3_url': ..., 's3_key': ..., 'parsed_content': ...}, ...]
+        """
         logger.debug(f"첨부파일 파싱 시작: {attachment}")
-        file_content = self.s3.get_object(Bucket=self.bucket_name, Key=attachment)['Body'].read()
-        filename = attachment.split('/')[-1]  # 파일명 추출
-        result = self._upstage_parse(file_content, filename)
-        logger.debug(f"첨부파일 파싱 완료: {attachment}")
-        return result
+        filename = attachment.split('/')[-1].lower()
+        base_url = f"https://{self.bucket_name}.s3.ap-northeast-2.amazonaws.com/{attachment}"
+        
+        try:
+            file_content = self.s3.get_object(Bucket=self.bucket_name, Key=attachment)['Body'].read()
+            
+            if filename.endswith('.zip'):
+                # ZIP 파일 처리
+                logger.info(f"ZIP 파일 감지: {attachment}")
+                return self._parse_zip_recursive(
+                    zip_content=file_content,
+                    base_url=base_url,
+                    base_key=attachment,
+                    current_depth=1
+                )
+            else:
+                # 일반 파일 처리
+                parsed = self._upstage_parse(file_content, filename)
+                logger.debug(f"첨부파일 파싱 완료: {attachment}")
+                return [{
+                    's3_url': base_url,
+                    's3_key': attachment,
+                    'parsed_content': parsed
+                }]
+        except Exception as e:
+            logger.error(f"첨부파일 파싱 실패 ({attachment}): {e}")
+            return [{
+                's3_url': base_url,
+                's3_key': attachment,
+                'parsed_content': None,
+                'error': str(e)
+            }]
+    
+    def _parse_zip_recursive(self, zip_content, base_url, base_key, current_depth):
+        """
+        ZIP 파일 재귀 파싱 (최대 3단계)
+        
+        Args:
+            zip_content: ZIP 파일 바이트 데이터
+            base_url: 기본 S3 URL
+            base_key: 기본 S3 key
+            current_depth: 현재 중첩 깊이
+            
+        Returns:
+            list: 파싱된 파일 리스트
+        """
+        results = []
+        
+        try:
+            with zipfile.ZipFile(io.BytesIO(zip_content), 'r') as zf:
+                file_list = zf.namelist()
+                logger.info(f"ZIP 파일 내용 (depth={current_depth}): {len(file_list)}개 항목")
+                
+                for file_info in file_list:
+                    # 디렉토리 건너뛰기
+                    if file_info.endswith('/'):
+                        continue
+                    
+                    # 파일명 추출
+                    filename = file_info.split('/')[-1]
+                    if not filename:
+                        continue
+                    
+                    # 현재 파일의 URL과 Key 생성 (# 구분자 사용)
+                    file_url = f"{base_url}#{file_info}"
+                    file_key = f"{base_key}#{file_info}"
+                    
+                    try:
+                        file_content = zf.read(file_info)
+                        
+                        # 파일 크기 체크
+                        if len(file_content) > self.MAX_FILE_SIZE:
+                            logger.warning(f"파일 크기 초과 (>{self.MAX_FILE_SIZE // 1024 // 1024}MB): {file_key}")
+                            results.append({
+                                's3_url': file_url,
+                                's3_key': file_key,
+                                'parsed_content': None,
+                                'error': 'File size exceeded'
+                            })
+                            continue
+                        
+                        # 중첩 ZIP 파일 처리
+                        if filename.lower().endswith('.zip'):
+                            if current_depth < self.MAX_ZIP_DEPTH:
+                                logger.info(f"중첩 ZIP 파일 발견 (depth={current_depth}): {filename}")
+                                nested_results = self._parse_zip_recursive(
+                                    zip_content=file_content,
+                                    base_url=file_url,
+                                    base_key=file_key,
+                                    current_depth=current_depth + 1
+                                )
+                                results.extend(nested_results)
+                            else:
+                                logger.warning(f"최대 중첩 깊이 초과 ({self.MAX_ZIP_DEPTH}): {file_key}")
+                                results.append({
+                                    's3_url': file_url,
+                                    's3_key': file_key,
+                                    'parsed_content': None,
+                                    'error': f'Max ZIP depth ({self.MAX_ZIP_DEPTH}) exceeded'
+                                })
+                        
+                        # 지원하는 파일 형식 파싱
+                        elif self._is_supported_file(filename):
+                            logger.debug(f"파일 파싱 중: {filename}")
+                            parsed = self._upstage_parse(file_content, filename)
+                            results.append({
+                                's3_url': file_url,
+                                's3_key': file_key,
+                                'parsed_content': parsed
+                            })
+                        else:
+                            logger.debug(f"지원하지 않는 파일 형식 건너뜀: {filename}")
+                            
+                    except Exception as e:
+                        logger.error(f"ZIP 내부 파일 처리 실패 ({file_info}): {e}")
+                        results.append({
+                            's3_url': file_url,
+                            's3_key': file_key,
+                            'parsed_content': None,
+                            'error': str(e)
+                        })
+                        continue
+                        
+        except zipfile.BadZipFile:
+            logger.error(f"손상된 ZIP 파일: {base_key}")
+            results.append({
+                's3_url': base_url,
+                's3_key': base_key,
+                'parsed_content': None,
+                'error': 'Bad ZIP file'
+            })
+        except Exception as e:
+            logger.error(f"ZIP 파일 처리 실패 ({base_key}): {e}")
+            results.append({
+                's3_url': base_url,
+                's3_key': base_key,
+                'parsed_content': None,
+                'error': str(e)
+            })
+        
+        logger.info(f"ZIP 파싱 완료 (depth={current_depth}): {len(results)}개 파일")
+        return results
+    
+    def _is_supported_file(self, filename):
+        """
+        지원하는 파일 형식인지 확인
+        
+        Args:
+            filename: 파일명
+            
+        Returns:
+            bool: 지원 여부
+        """
+        if '.' not in filename:
+            return False
+        ext = '.' + filename.lower().split('.')[-1]
+        return ext in self.SUPPORTED_EXTENSIONS
     
     def _upstage_parse(self, file_content, filename="document.hwp"):
         """Upstage API를 사용하여 파일 내용을 파싱"""
