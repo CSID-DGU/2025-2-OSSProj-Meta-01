@@ -1,8 +1,13 @@
 import os
+import logging
 from dotenv import load_dotenv
 import boto3
 import requests
+
 load_dotenv()
+
+# 로거 설정
+logger = logging.getLogger('ai.parsing_tools')
 
 class ParsingTools:
     def __init__(self):
@@ -23,15 +28,21 @@ class ParsingTools:
     
     def parse_image_to_content(self, image):
         """이미지 파일을 S3에서 가져와서 Upstage로 파싱"""
+        logger.debug(f"이미지 파싱 시작: {image}")
         file_content = self.s3.get_object(Bucket=self.bucket_name, Key=image)['Body'].read()
         filename = image.split('/')[-1]  # 파일명 추출
-        return self._upstage_parse(file_content, filename)
+        result = self._upstage_parse(file_content, filename)
+        logger.debug(f"이미지 파싱 완료: {image}")
+        return result
     
     def parse_attachment_to_content(self, attachment):
         """첨부파일을 S3에서 가져와서 Upstage로 파싱"""
+        logger.debug(f"첨부파일 파싱 시작: {attachment}")
         file_content = self.s3.get_object(Bucket=self.bucket_name, Key=attachment)['Body'].read()
         filename = attachment.split('/')[-1]  # 파일명 추출
-        return self._upstage_parse(file_content, filename)
+        result = self._upstage_parse(file_content, filename)
+        logger.debug(f"첨부파일 파싱 완료: {attachment}")
+        return result
     
     def _upstage_parse(self, file_content, filename="document.hwp"):
         """Upstage API를 사용하여 파일 내용을 파싱"""
@@ -52,6 +63,7 @@ class ParsingTools:
             
             # 응답 상태 체크
             if response.status_code != 200:
+                logger.warning(f"Upstage API 오류 (상태 코드: {response.status_code}): {filename}")
                 return None
             
             result = response.json()
@@ -70,7 +82,9 @@ class ParsingTools:
             elif "text" in result:
                 return result["text"]
             else:
+                logger.warning(f"Upstage API 응답에서 content를 찾을 수 없음: {filename}")
                 return None
                 
         except Exception as e:
+            logger.error(f"Upstage API 호출 실패 ({filename}): {e}")
             return None
