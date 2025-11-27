@@ -7,6 +7,7 @@ boto3>=1.29.0
 
 # Database
 pymongo>=4.6.0
+pymysql
 mysqlclient==2.2.4
 mysql-connector-python==9.0.0
 
@@ -28,6 +29,7 @@ pydantic == 2.12.3
 
 # Django
 Django==5.0.6
+django-cors-headers
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
 

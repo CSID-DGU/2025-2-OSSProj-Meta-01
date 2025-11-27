@@ -1,8 +1,12 @@
 import os
 import random
+import logging
 import mysql.connector
 from dotenv import load_dotenv
 from faker import Faker
+
+# 로거 설정
+logger = logging.getLogger('ai.create_user_dummies')
 
 
 class CreateDummies:
@@ -31,27 +35,27 @@ class CreateDummies:
         # Faker 인스턴스 생성 (한국어)
         self.fake = Faker('ko_KR')
         
-        # 전공 ID 목록 (하드코딩) - 63개
-        self.major_ids = list(range(1, 5))
+        # # 전공 ID 목록 (하드코딩) - 63개
+        # self.major_ids = list(range(1, 5))
         
-        # 키워드 ID 목록 (하드코딩) - 14개
-        self.keyword_ids = list(range(1, 6))
+        # # 키워드 ID 목록 (하드코딩) - 14개
+        # self.keyword_ids = list(range(1, 6))
         
-        # 자격증 ID 목록 (하드코딩)
-        self.certification_ids = list(range(1, 7))
+        # # 자격증 ID 목록 (하드코딩)
+        # self.certification_ids = list(range(1, 7))
         
-        # # SQL에서 가져오는 코드 (주석처리)
-        # # 전공 ID 목록 가져오기
-        # self.cursor.execute("SELECT major_id FROM Majors")
-        # self.major_ids = [row[0] for row in self.cursor.fetchall()]
-        # 
-        # # 키워드 ID 목록 가져오기
-        # self.cursor.execute("SELECT keyword_id FROM Keywords")
-        # self.keyword_ids = [row[0] for row in self.cursor.fetchall()]
-        # 
-        # # 자격증 ID 목록 가져오기
-        # self.cursor.execute("SELECT certification_id FROM Certifications")
-        # self.certification_ids = [row[0] for row in self.cursor.fetchall()]
+        # SQL에서 가져오는 코드 (주석처리)
+        # 전공 ID 목록 가져오기
+        self.cursor.execute("SELECT major_id FROM Majors")
+        self.major_ids = [row[0] for row in self.cursor.fetchall()]
+        
+        # 키워드 ID 목록 가져오기
+        self.cursor.execute("SELECT keyword_id FROM Keywords")
+        self.keyword_ids = [row[0] for row in self.cursor.fetchall()]
+        
+        # 자격증 ID 목록 가져오기
+        self.cursor.execute("SELECT certification_id FROM Certifications")
+        self.certification_ids = [row[0] for row in self.cursor.fetchall()]
         
     def create_users(self, num_users=10):
         """
@@ -95,14 +99,14 @@ class CreateDummies:
                 user_db_id = self.cursor.lastrowid
                 created_user_ids.append(user_db_id)
                 
-                print(f"사용자 생성 완료: {user_data['user_name']} (ID: {user_id})")
+                logger.debug(f"사용자 생성 완료: {user_data['user_name']} (ID: {user_id})")
                 
             except mysql.connector.Error as err:
-                print(f"사용자 생성 중 오류 발생: {err}")
+                logger.error(f"사용자 생성 중 오류 발생: {err}")
                 continue
         
         self.connection.commit()
-        print(f"\n총 {len(created_user_ids)}명의 사용자가 생성되었습니다.")
+        logger.info(f"총 {len(created_user_ids)}명의 사용자가 생성되었습니다.")
         return created_user_ids
     
     def add_user_keywords(self, user_ids, min_keywords=1, max_keywords=3):
@@ -115,7 +119,7 @@ class CreateDummies:
             max_keywords (int): 사용자당 최대 키워드 수
         """
         if not self.keyword_ids:
-            print("키워드가 없어 건너뜁니다.")
+            logger.warning("키워드가 없어 건너뜁니다.")
             return
         
         for user_id in user_ids:
@@ -130,11 +134,11 @@ class CreateDummies:
                     """
                     self.cursor.execute(insert_query, (user_id, keyword_id))
                 except mysql.connector.Error as err:
-                    print(f"키워드 할당 중 오류 발생: {err}")
+                    logger.warning(f"키워드 할당 중 오류 발생: {err}")
                     continue
         
         self.connection.commit()
-        print(f"사용자에게 키워드가 할당되었습니다.")
+        logger.info(f"사용자 {len(user_ids)}명에게 키워드 할당 완료")
     
     def add_user_certifications(self, user_ids, probability=0.5):
         """
@@ -145,7 +149,7 @@ class CreateDummies:
             probability (float): 자격증을 가질 확률 (0.0 ~ 1.0)
         """
         if not self.certification_ids:
-            print("자격증이 없어 건너뜁니다.")
+            logger.warning("자격증이 없어 건너뜁니다.")
             return
         
         for user_id in user_ids:
@@ -178,11 +182,11 @@ class CreateDummies:
                     """
                     self.cursor.execute(insert_query, (user_id, cert_id, score, acquired_date, expiration_date))
                 except mysql.connector.Error as err:
-                    print(f"자격증 할당 중 오류 발생: {err}")
+                    logger.warning(f"자격증 할당 중 오류 발생: {err}")
                     continue
         
         self.connection.commit()
-        print(f"사용자에게 자격증이 할당되었습니다.")
+        logger.info(f"사용자 {len(user_ids)}명에게 자격증 할당 완료")
     
     def add_user_bookmarks(self, user_ids=None, min_bookmarks=5, max_bookmarks=15):
         """
@@ -204,10 +208,10 @@ class CreateDummies:
         scholarship_ids = [row[0] for row in self.cursor.fetchall()]
         
         if not scholarship_ids:
-            print("장학금이 없어 북마크를 생성할 수 없습니다.")
+            logger.warning("장학금이 없어 북마크를 생성할 수 없습니다.")
             return
         
-        print(f"\n유저 {len(user_ids)}명, 장학금 {len(scholarship_ids)}개 대상으로 북마크 생성...")
+        logger.info(f"유저 {len(user_ids)}명, 장학금 {len(scholarship_ids)}개 대상으로 북마크 생성 시작")
         
         total_bookmarks = 0
         
@@ -263,7 +267,7 @@ class CreateDummies:
                     continue  # 중복 무시
         
         self.connection.commit()
-        print(f"총 {total_bookmarks}개의 북마크가 생성되었습니다.")
+        logger.info(f"총 {total_bookmarks}개의 북마크가 생성되었습니다.")
     
     def create_complete_users(self, num_users=10):
         """
@@ -275,20 +279,20 @@ class CreateDummies:
         Returns:
             list: 생성된 사용자 ID 목록
         """
-        print(f"=== {num_users}명의 가상 사용자 생성 시작 ===\n")
+        logger.info(f"{num_users}명의 가상 사용자 생성 시작")
         
         # 사용자 생성
         user_ids = self.create_users(num_users)
         
         # 키워드 할당
-        print("\n--- 키워드 할당 ---")
+        logger.info("키워드 할당 시작")
         self.add_user_keywords(user_ids)
         
         # 자격증 할당
-        print("\n--- 자격증 할당 ---")
+        logger.info("자격증 할당 시작")
         self.add_user_certifications(user_ids)
         
-        print(f"\n=== 가상 사용자 생성 완료 ===")
+        logger.info(f"가상 사용자 생성 완료: {len(user_ids)}명")
         return user_ids
     
     def close(self):
@@ -299,7 +303,7 @@ class CreateDummies:
             self.cursor.close()
         if self.connection:
             self.connection.close()
-        print("데이터베이스 연결이 종료되었습니다.")
+        logger.debug("데이터베이스 연결이 종료되었습니다.")
     
     def __enter__(self):
         """
