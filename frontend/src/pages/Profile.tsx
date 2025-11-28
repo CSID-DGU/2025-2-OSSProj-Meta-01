@@ -23,9 +23,26 @@ type ScholarshipItem = {
   url?: string;
 };
 
+/* ---- 키워드 타입 ---- */
+// 전체 키워드 목록용
+type KeywordBase = {
+  keyword_id: number;
+  keyword: string;
+};
+
+// 사용자 키워드 목록용
+type UserKeyword = {
+  user_keyword_id: number;
+  keyword_id: number;
+  keyword: string;
+};
+
+// 화면에서 사용할 통합 타입
 type Keyword = {
-  name: string;
+  keyword_id: number;
+  keyword: string;
   active: boolean;
+  user_keyword_id?: number | null;
 };
 
 /* ---- 자격증 타입 ---- */
@@ -122,7 +139,7 @@ const ProfilePage: React.FC = () => {
   /*                         초기 로드                           */
   /* ----------------------------------------------------------- */
   useEffect(() => {
-    initKeywords();
+    loadKeywords(); // 키워드 API 연동
     loadScholarships();
     loadMyInfo();
     loadAllCerts();
@@ -130,31 +147,32 @@ const ProfilePage: React.FC = () => {
     loadBookmarks();
   }, []);
 
-  /* ------------------- 초기 키워드 로드 ------------------- */
-  const initKeywords = () => {
-    const adminDefault: Keyword[] = [
-      { name: "교내장학", active: true },
-      { name: "교외장학", active: true },
-      { name: "국가장학", active: true },
-      { name: "등록금지원", active: true },
-      { name: "생활비지원", active: true },
-      { name: "이공계", active: true },
-      { name: "인문계", active: true },
-      { name: "예체능", active: true },
-      { name: "봉사", active: true },
-      { name: "성적우수", active: true },
-      { name: "저소득층", active: true },
-      { name: "기업연계", active: true },
-      { name: "자격증", active: true },
-      { name: "종교", active: true },
-    ];
+  /* ------------------- 키워드 로드 (API 연동) ------------------- */
+  const loadKeywords = async () => {
+    try {
+      const [baseRes, userRes] = await Promise.all([
+        apiRequest("http://127.0.0.1:8000/mypage/keywords/"),
+        apiRequest("http://127.0.0.1:8000/mypage/me/keywords/"),
+      ]);
 
-    const saved = localStorage.getItem("keywords");
-    if (saved) {
-      setKeywords(JSON.parse(saved));
-    } else {
-      setKeywords(adminDefault);
-      localStorage.setItem("keywords", JSON.stringify(adminDefault));
+      if (!baseRes.ok || !userRes.ok) return;
+
+      const baseData: KeywordBase[] = await baseRes.json();
+      const userData: UserKeyword[] = await userRes.json();
+
+      const merged: Keyword[] = baseData.map((b) => {
+        const uk = userData.find((u) => u.keyword_id === b.keyword_id);
+        return {
+          keyword_id: b.keyword_id,
+          keyword: b.keyword,
+          active: !!uk,
+          user_keyword_id: uk ? uk.user_keyword_id : null,
+        };
+      });
+
+      setKeywords(merged);
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -169,9 +187,11 @@ const ProfilePage: React.FC = () => {
     const res = await apiRequest("http://127.0.0.1:8000/mypage/me/");
     if (!res.ok) return;
     const data = await res.json();
+
+    // 백엔드 응답 구조에 맞게 일부만 매핑 (이름/학과는 필요 시 추가 작업)
     setForm({
-      name: data.user_name,
-      major: data.major_name,
+      name: data.user_name ?? "",
+      major: data.major_name ?? "",
       grade: String(data.year ?? ""),
       gpa: String(data.gpa ?? ""),
       incomeLevel: String(data.income_level ?? ""),
@@ -219,8 +239,9 @@ const ProfilePage: React.FC = () => {
       { method: "DELETE" }
     );
 
+    const data = await res.json();
+
     if (res.ok) {
-      const data = await res.json();
       setUserBookmarks(data.bookmarks);
     } else {
       alert("북마크 해제 실패");
@@ -258,33 +279,71 @@ const ProfilePage: React.FC = () => {
     });
 
     const data = await res.json();
+
     if (res.ok) {
       alert("비밀번호가 변경되었습니다.");
       setPwForm({ old_password: "", new_password1: "", new_password2: "" });
     } else {
-      alert(data.details?.error || "비밀번호 변경 실패");
+      // 백엔드 에러 포맷에 맞춰 메시지 표시
+      const detail = data.details;
+      const firstKey = detail && Object.keys(detail)[0];
+      const msgArray = firstKey ? detail[firstKey] : null;
+      const msg =
+        (Array.isArray(msgArray) && msgArray[0]) ||
+        detail?.error?.[0] ||
+        data.error ||
+        "비밀번호 변경 실패";
+      alert(msg);
     }
   };
 
   /* ----------------------------------------------------------- */
   /*                       키워드 로직                          */
   /* ----------------------------------------------------------- */
-  const handleToggleKeyword = (kwName: string) => {
+
+  const handleToggleKeyword = (keywordId: number) => {
     if (!editingKeywords) return;
     setKeywords((prev) =>
-      prev.map((k) => (k.name === kwName ? { ...k, active: !k.active } : k))
+      prev.map((k) =>
+        k.keyword_id === keywordId ? { ...k, active: !k.active } : k
+      )
     );
   };
 
   const handleCancelKeywords = () => {
-    const saved = localStorage.getItem("keywords");
-    if (saved) setKeywords(JSON.parse(saved));
+    // 서버 상태로 되돌리기
+    loadKeywords();
     setEditingKeywords(false);
   };
 
-  const handleSaveKeywords = () => {
-    localStorage.setItem("keywords", JSON.stringify(keywords));
-    setEditingKeywords(false);
+  const handleSaveKeywords = async () => {
+    try {
+      const toAdd = keywords.filter((k) => k.active && !k.user_keyword_id);
+      const toRemove = keywords.filter((k) => !k.active && k.user_keyword_id);
+
+      // 추가
+      for (const k of toAdd) {
+        await apiRequest("http://127.0.0.1:8000/mypage/me/keywords/add/", {
+          method: "POST",
+          body: JSON.stringify({ keyword_id: k.keyword_id }),
+        });
+      }
+
+      // 삭제
+      for (const k of toRemove) {
+        await apiRequest(
+          `http://127.0.0.1:8000/mypage/me/keywords/${k.user_keyword_id}/`,
+          { method: "DELETE" }
+        );
+      }
+
+      await loadKeywords();
+      setEditingKeywords(false);
+      alert("관심 키워드가 저장되었습니다.");
+    } catch (e) {
+      console.error(e);
+      alert("관심 키워드 저장 중 오류가 발생했습니다.");
+    }
   };
 
   /* ----------------------------------------------------------- */
@@ -305,12 +364,16 @@ const ProfilePage: React.FC = () => {
       }
     );
 
+    const data = await res.json();
+
     if (res.ok) {
       alert("자격증이 추가되었습니다.");
       setAddModalOpen(false);
+      // 백엔드에서 certifications 목록을 바로 내려주므로 사용해도 되고,
+      // 그냥 다시 조회하는 방식으로 유지
       loadUserCerts();
     } else {
-      alert("추가 실패");
+      alert(data.error || "추가 실패");
     }
   };
 
@@ -333,12 +396,14 @@ const ProfilePage: React.FC = () => {
       }
     );
 
+    const data = await res.json();
+
     if (res.ok) {
       alert("수정되었습니다.");
       setEditModalOpen(false);
       loadUserCerts();
     } else {
-      alert("수정 실패");
+      alert(data.error || "수정 실패");
     }
   };
 
@@ -350,12 +415,14 @@ const ProfilePage: React.FC = () => {
       { method: "DELETE" }
     );
 
+    const data = await res.json();
+
     if (res.ok) {
       alert("삭제되었습니다.");
       setEditModalOpen(false);
       loadUserCerts();
     } else {
-      alert("삭제 실패");
+      alert(data.error || "삭제 실패");
     }
   };
 
@@ -456,43 +523,6 @@ const ProfilePage: React.FC = () => {
           </div>
         </section>
 
-        {/* ================== 비밀번호 변경 ================== */}
-        <section style={card}>
-          <h3 style={sectionTitle}>비밀번호 변경</h3>
-
-          <input
-            placeholder="기존 비밀번호"
-            type="password"
-            value={pwForm.old_password}
-            onChange={(e) =>
-              setPwForm({ ...pwForm, old_password: e.target.value })
-            }
-            style={modalInput}
-          />
-          <input
-            placeholder="새 비밀번호"
-            type="password"
-            value={pwForm.new_password1}
-            onChange={(e) =>
-              setPwForm({ ...pwForm, new_password1: e.target.value })
-            }
-            style={modalInput}
-          />
-          <input
-            placeholder="새 비밀번호 확인"
-            type="password"
-            value={pwForm.new_password2}
-            onChange={(e) =>
-              setPwForm({ ...pwForm, new_password2: e.target.value })
-            }
-            style={modalInput}
-          />
-
-          <button style={saveBtn} onClick={handleChangePassword}>
-            비밀번호 변경
-          </button>
-        </section>
-
         {/* ============= 관심 키워드 ============= */}
         <section style={card}>
           <h3 style={sectionTitle}>내 관심 키워드</h3>
@@ -505,10 +535,10 @@ const ProfilePage: React.FC = () => {
               marginBottom: 20,
             }}
           >
-            {keywords.map((kw, i) => (
+            {keywords.map((kw) => (
               <div
-                key={i}
-                onClick={() => handleToggleKeyword(kw.name)}
+                key={kw.keyword_id}
+                onClick={() => handleToggleKeyword(kw.keyword_id)}
                 style={{
                   background: kw.active ? "#f9a24e" : "#f3f4f6",
                   color: kw.active ? "#fff" : "#9ca3af",
@@ -518,7 +548,7 @@ const ProfilePage: React.FC = () => {
                   border: kw.active ? "1px solid #f68a0a" : "1px solid #e5e7eb",
                 }}
               >
-                #{kw.name}
+                #{kw.keyword}
               </div>
             ))}
           </div>
@@ -629,6 +659,47 @@ const ProfilePage: React.FC = () => {
         {/* ============= 계정 ============= */}
         <section style={card}>
           <h3 style={sectionTitle}>계정</h3>
+
+          {/* 비밀번호 변경 섹션 (아래로 이동) */}
+          <div
+            style={{
+              display: "grid",
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
+            <input
+              placeholder="기존 비밀번호"
+              type="password"
+              value={pwForm.old_password}
+              onChange={(e) =>
+                setPwForm({ ...pwForm, old_password: e.target.value })
+              }
+              style={modalInput}
+            />
+            <input
+              placeholder="새 비밀번호"
+              type="password"
+              value={pwForm.new_password1}
+              onChange={(e) =>
+                setPwForm({ ...pwForm, new_password1: e.target.value })
+              }
+              style={modalInput}
+            />
+            <input
+              placeholder="새 비밀번호 확인"
+              type="password"
+              value={pwForm.new_password2}
+              onChange={(e) =>
+                setPwForm({ ...pwForm, new_password2: e.target.value })
+              }
+              style={modalInput}
+            />
+            <button style={saveBtn} onClick={handleChangePassword}>
+              비밀번호 변경
+            </button>
+          </div>
+
           <button style={logoutBtn}>회원탈퇴</button>
         </section>
       </div>
@@ -904,7 +975,7 @@ const logoStyle: React.CSSProperties = {
   objectFit: "contain",
 };
 
-const card = {
+const card: React.CSSProperties = {
   background: "#fff",
   borderRadius: 18,
   boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
@@ -913,7 +984,11 @@ const card = {
   border: `1px solid ${color.border}`,
 };
 
-const sectionTitle = { fontSize: 16, fontWeight: 700, marginBottom: 14 };
+const sectionTitle: React.CSSProperties = {
+  fontSize: 16,
+  fontWeight: 700,
+  marginBottom: 14,
+};
 
 const sectionTop = {
   display: "flex",
@@ -922,13 +997,13 @@ const sectionTop = {
   marginBottom: 10,
 };
 
-const formWrap = {
+const formWrap: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(2, 1fr)",
   gap: 14,
 };
 
-const editBtn = {
+const editBtn: React.CSSProperties = {
   padding: "8px 16px",
   borderRadius: 10,
   border: `1.5px solid ${color.orange}`,
@@ -939,7 +1014,7 @@ const editBtn = {
   fontSize: 14,
 };
 
-const cancelBtn = {
+const cancelBtn: React.CSSProperties = {
   padding: "8px 16px",
   borderRadius: 10,
   border: `1.5px solid ${color.orange}`,
@@ -950,18 +1025,18 @@ const cancelBtn = {
   fontSize: 14,
 };
 
-const saveBtn = { ...editBtn };
+const saveBtn: React.CSSProperties = { ...editBtn };
 
-const badge = {
+const badge: React.CSSProperties = {
   fontSize: 12,
   border: `1px solid ${color.border}`,
   borderRadius: 999,
   padding: "4px 10px",
 };
 
-const listWrap = { display: "grid", gap: 10 };
+const listWrap: React.CSSProperties = { display: "grid", gap: 10 };
 
-const bookmarkItem = {
+const bookmarkItem: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
@@ -970,11 +1045,15 @@ const bookmarkItem = {
   padding: "12px 14px",
 };
 
-const bookmarkLeft = { display: "flex", alignItems: "center", gap: 8 };
+const bookmarkLeft: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+};
 
-const metaText = { fontSize: 12, color: color.sub };
+const metaText: React.CSSProperties = { fontSize: 12, color: color.sub };
 
-const miniBtn = {
+const miniBtn: React.CSSProperties = {
   padding: "6px 10px",
   borderRadius: 999,
   border: `1px solid ${color.border}`,
@@ -983,7 +1062,7 @@ const miniBtn = {
   cursor: "pointer",
 };
 
-const addCert = {
+const addCert: React.CSSProperties = {
   color: color.orange,
   fontSize: 14,
   fontWeight: 600,
@@ -991,7 +1070,11 @@ const addCert = {
   cursor: "pointer",
 };
 
-const certList = { display: "grid", gap: 12, marginBottom: 12 };
+const certList: React.CSSProperties = {
+  display: "grid",
+  gap: 12,
+  marginBottom: 12,
+};
 
 const certItem: React.CSSProperties = {
   display: "flex",
@@ -1002,7 +1085,7 @@ const certItem: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const logoutBtn = {
+const logoutBtn: React.CSSProperties = {
   padding: "10px 14px",
   borderRadius: 12,
   border: `1px solid ${color.border}`,
@@ -1036,16 +1119,16 @@ const modalTitle: React.CSSProperties = {
   textAlign: "center",
 };
 
-const modalInput = {
+const modalInput: React.CSSProperties = {
   border: "1px solid #e5e7eb",
   borderRadius: 10,
   padding: "10px 12px",
   fontSize: 14,
   background: "#f9fafb",
-  marginBottom: 10,
+  marginBottom: 4,
 };
 
-const modalCancel = {
+const modalCancel: React.CSSProperties = {
   border: "1px solid #d1d5db",
   background: "#fff",
   borderRadius: 10,
@@ -1054,7 +1137,7 @@ const modalCancel = {
   fontSize: 14,
 };
 
-const modalSave = {
+const modalSave: React.CSSProperties = {
   background: color.orange,
   color: "#fff",
   borderRadius: 10,
