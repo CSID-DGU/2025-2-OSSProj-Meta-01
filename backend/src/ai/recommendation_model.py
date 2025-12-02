@@ -153,17 +153,27 @@ class ScholarshipRecommender:
         return ' '.join(parts)
     
     def prepare_data(self):
-        """데이터 준비 및 임베딩 생성"""
+        """데이터 준비 및 임베딩 생성 (Mongo _id ↔ Scholarships.doc_id 매핑)"""
         print("데이터 준비 중...")
         
         # 유저 데이터 (MySQL)
         self.cursor.execute("SELECT * FROM Users")
         users = self.cursor.fetchall()
         
-        # 장학금 데이터 (MongoDB) - scholarship_id 순서로 매핑하기 위해 순서 유지
-        scholarships = list(self.mongo_collection.find({}).sort('_id', 1))
+        # Mongo 문서 전체 로드 (_id 문자열 → 문서)
+        mongo_docs = {str(doc["_id"]): doc for doc in self.mongo_collection.find({})}
         
-        print(f"유저 {len(users)}명, 장학금 {len(scholarships)}개 로드 완료")
+        # Scholarships.doc_id와 Mongo _id를 조인해 (scholarship_id, doc) 리스트 생성
+        self.cursor.execute("SELECT scholarship_id, doc_id FROM Scholarships WHERE doc_id IS NOT NULL")
+        rows = self.cursor.fetchall()
+        joined = []
+        for row in rows:
+            doc = mongo_docs.get(row["doc_id"])
+            if not doc:
+                continue
+            joined.append((row["scholarship_id"], doc))
+        
+        print(f"유저 {len(users)}명, 장학금 {len(joined)}개 로드 완료 (MySQL↔Mongo 조인)")
         
         # 임베딩 모델 로드
         print("\n[1/2] 임베딩 모델 로드...")
@@ -177,22 +187,16 @@ class ScholarshipRecommender:
             self.user_embeddings[user['user_id']] = user_embs[i]
         print(f"  유저 {len(users)}명 완료")
         
-        # 장학금 임베딩 (글번호 = MySQL scholarship_id)
-        for idx, doc in enumerate(scholarships):
-            # MongoDB 글번호를 scholarship_id로 사용
-            scholarship_id = int(doc.get('글번호', 0))
-            if scholarship_id == 0:
-                continue
-                
+        # 장학금 임베딩 (키는 MySQL scholarship_id, 내용은 Mongo 문서 기반 텍스트)
+        for idx, (scholarship_id, doc) in enumerate(joined):
             scholarship_text = self.get_scholarship_text(doc)
-            
             emb = embedder.embed(scholarship_text)
             self.scholarship_embeddings[scholarship_id] = emb[0]
             self.scholarship_ids.append(scholarship_id)
             self.scholarship_docs[scholarship_id] = doc
             
             if (idx + 1) % 10 == 0:
-                print(f"  장학금 {idx + 1}/{len(scholarships)} 완료...")
+                print(f"  장학금 {idx + 1}/{len(joined)} 완료...")
         
         # 메모리 해제
         embedder.release()
@@ -200,7 +204,7 @@ class ScholarshipRecommender:
         gc.collect()
         
         print("데이터 준비 완료!")
-        return users, scholarships
+        return users, [doc for _, doc in joined]
     
     def info_nce_loss(self, user_vec, scholarship_vec, temperature=0.07):
         """InfoNCE Loss (Contrastive Learning)

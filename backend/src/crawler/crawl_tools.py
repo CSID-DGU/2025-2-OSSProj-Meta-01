@@ -484,11 +484,12 @@ class CrawlTools:
         
         for scholarship_doc in scholarships:
             try:
-                # 글번호를 scholarship_id로 사용 (MongoDB 글번호 = MySQL scholarship_id)
-                scholarship_id = int(scholarship_doc.get('글번호', 0))
-                if scholarship_id == 0:
-                    logger.warning(f"글번호가 없는 문서 건너뜀: {scholarship_doc.get('_id')}")
+                # MongoDB _id를 문자열로 변환하여 MySQL Scholarships.doc_id에 저장
+                mongo_id = scholarship_doc.get('_id')
+                if not mongo_id:
+                    logger.warning("MongoDB _id가 없는 문서 건너뜀")
                     continue
+                doc_id = str(mongo_id)
                 
                 # 제목
                 scholarship_name = scholarship_doc.get('제목', '제목 없음')
@@ -535,13 +536,13 @@ class CrawlTools:
                     if organization_id:
                         org_created_count += 1
                 
-                # MySQL에 삽입 (scholarship_id 명시적 지정)
+                # MySQL에 삽입 (scholarship_id는 AUTO_INCREMENT, doc_id에 Mongo _id 문자열 저장)
                 insert_query = """
-                INSERT INTO Scholarships (scholarship_id, university_id, organization_id, scholarship_name, start_date, end_date, url, image_url)
+                INSERT INTO Scholarships (doc_id, university_id, organization_id, scholarship_name, start_date, end_date, url, image_url)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 self.mysql_cursor.execute(insert_query, (
-                    scholarship_id,
+                    doc_id,
                     university_id,
                     organization_id,
                     scholarship_name,
@@ -550,6 +551,9 @@ class CrawlTools:
                     url,
                     image_url
                 ))
+                
+                # 방금 삽입된 scholarship_id 조회 (AUTO_INCREMENT PK)
+                scholarship_id = self.mysql_cursor.lastrowid
                 
                 inserted_count += 1
                 
