@@ -18,10 +18,6 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: admin123  # 루트 비밀번호 (실제 운영시 변경 필요!)
       MONGO_INITDB_DATABASE: dongguk_db  # 초기 생성할 데이터베이스 이름
     
-    volumes:
-      - ./data/mongodb:/data/db
-      - ./data/mongodb_config:/data/configdb
-    
     # 컨테이너 헬스체크 설정
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet

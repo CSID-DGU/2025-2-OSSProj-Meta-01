@@ -4,6 +4,7 @@ import requests
 import json
 import time
 import re
+import logging
 from datetime import datetime
 import boto3
 from pymongo import MongoClient
@@ -14,6 +15,9 @@ from dotenv import load_dotenv
 
 # .env 파일 로드
 load_dotenv()
+
+# 로거 설정
+logger = logging.getLogger('crawler.crawl_tools')
 
 
 class CrawlTools:
@@ -79,7 +83,7 @@ class CrawlTools:
         Returns:
             list: 게시글 목록
         """
-        print("=== 함수1: 페이지 목록 크롤링 시작 ===")
+        logger.info("페이지 목록 크롤링 시작")
         
         # 첫 페이지에서 총 페이지 수 확인
         r = requests.get("https://www.dongguk.edu/article/JANGHAKNOTICE/list", headers=self.headers)
@@ -90,7 +94,7 @@ class CrawlTools:
         if max_pages:
             total_pages = min(total_pages, max_pages)
         
-        print(f"크롤링할 페이지: {total_pages}개")
+        logger.info(f"크롤링할 페이지: {total_pages}개")
         
         def crawl_single_page(page):
             url = f"https://www.dongguk.edu/article/JANGHAKNOTICE/list?pageIndex={page}"
@@ -126,7 +130,7 @@ class CrawlTools:
             for future in as_completed(futures):
                 all_posts.extend(future.result())
         
-        print(f"완료: {len(all_posts)}개 게시글\n")
+        logger.info(f"페이지 목록 크롤링 완료: {len(all_posts)}개 게시글")
         return all_posts
     
     def enrich_articles(self, articles):
@@ -139,7 +143,7 @@ class CrawlTools:
         Returns:
             list: enriched 게시글 목록
         """
-        print("=== 함수2: 상세 페이지 enrichment 시작 ===")
+        logger.info("상세 페이지 enrichment 시작")
         
         def crawl_detail(article):
             url = article['URL']
@@ -196,7 +200,7 @@ class CrawlTools:
             for future in as_completed(futures):
                 enriched_list.append(future.result())
         
-        print(f"완료: {len(enriched_list)}개 enrichment\n")
+        logger.info(f"상세 페이지 enrichment 완료: {len(enriched_list)}개")
         return enriched_list
     
     def upload_attachments_to_s3(self, enriched_articles):
@@ -211,7 +215,7 @@ class CrawlTools:
         """
         # 전체 첨부파일 개수 계산
         total_attachments = sum(len(article.get('attachments', [])) for article in enriched_articles)
-        print(f"=== 함수3: 첨부파일 S3 업로드 시작 (총 {total_attachments}개) ===")
+        logger.info(f"첨부파일 S3 업로드 시작 (총 {total_attachments}개)")
         
         uploaded_count = 0
         
@@ -249,7 +253,7 @@ class CrawlTools:
                 
                 # 진행상황 출력
                 uploaded_count += 1
-                print(f"  📎 [{uploaded_count}/{total_attachments}] 업로드 완료: {filename} (문서 {article_no})")
+                logger.debug(f"첨부파일 업로드 [{uploaded_count}/{total_attachments}]: {filename} (문서 {article_no})")
             
             article['attachment_s3_urls'] = s3_urls
             return article
@@ -260,7 +264,7 @@ class CrawlTools:
             for future in as_completed(futures):
                 updated_articles.append(future.result())
         
-        print(f"✅ 완료: 첨부파일 S3 업로드 ({uploaded_count}개)\n")
+        logger.info(f"첨부파일 S3 업로드 완료: {uploaded_count}개")
         return updated_articles
     
     def upload_images_to_s3(self, enriched_articles):
@@ -275,7 +279,7 @@ class CrawlTools:
         """
         # 전체 이미지 개수 계산
         total_images = sum(len(article.get('images', [])) for article in enriched_articles)
-        print(f"=== 함수4: 이미지 S3 업로드 시작 (총 {total_images}개) ===")
+        logger.info(f"이미지 S3 업로드 시작 (총 {total_images}개)")
         
         uploaded_count = 0
         
@@ -310,7 +314,7 @@ class CrawlTools:
                 
                 # 진행상황 출력
                 uploaded_count += 1
-                print(f"  🖼️  [{uploaded_count}/{total_images}] 업로드 완료: 이미지 #{idx} (문서 {article_no})")
+                logger.debug(f"이미지 업로드 [{uploaded_count}/{total_images}]: 이미지 #{idx} (문서 {article_no})")
             
             article['image_s3_urls'] = s3_urls
             return article
@@ -321,7 +325,7 @@ class CrawlTools:
             for future in as_completed(futures):
                 updated_articles.append(future.result())
         
-        print(f"✅ 완료: 이미지 S3 업로드 ({uploaded_count}개)\n")
+        logger.info(f"이미지 S3 업로드 완료: {uploaded_count}개")
         return updated_articles
     
     def save_to_mongodb(self, enriched_articles):
@@ -334,7 +338,7 @@ class CrawlTools:
         Returns:
             int: 저장된 게시글 수
         """
-        print("=== 함수5: MongoDB 저장 시작 ===")
+        logger.info("MongoDB 저장 시작")
         
         connection_string = f"mongodb://{self.mongo_config['user']}:{self.mongo_config['password']}@{self.mongo_config['host']}:{self.mongo_config['port']}/"
         client = MongoClient(connection_string)
@@ -347,7 +351,7 @@ class CrawlTools:
         # 데이터 삽입
         if enriched_articles:
             result = collection.insert_many(enriched_articles)
-            print(f"완료: MongoDB에 {len(result.inserted_ids)}개 저장\n")
+            logger.info(f"MongoDB 저장 완료: {len(result.inserted_ids)}개")
         
         client.close()
         return len(enriched_articles)
@@ -363,10 +367,9 @@ class CrawlTools:
             list: 최종 처리된 게시글 목록
         """
         start_time = time.time()
-        print("=" * 60)
-        print("장학금 크롤링 파이프라인 시작")
-        print("=" * 60)
-        print()
+        logger.info("=" * 60)
+        logger.info("장학금 크롤링 파이프라인 시작")
+        logger.info("=" * 60)
         
         # 1. 페이지 목록 크롤링
         articles = self.crawl_pages(max_pages=max_pages)
@@ -385,11 +388,11 @@ class CrawlTools:
         
         elapsed = time.time() - start_time
         
-        print("=" * 60)
-        print(f"파이프라인 완료!")
-        print(f"총 처리: {saved_count}개")
-        print(f"총 소요 시간: {elapsed:.2f}초")
-        print("=" * 60)
+        logger.info("=" * 60)
+        logger.info(f"크롤링 파이프라인 완료!")
+        logger.info(f"총 처리: {saved_count}개")
+        logger.info(f"총 소요 시간: {elapsed:.2f}초")
+        logger.info("=" * 60)
         
         return with_images
     
@@ -406,7 +409,7 @@ class CrawlTools:
                 database=os.getenv('MYSQL_DATABASE')
             )
             self.mysql_cursor = self.mysql_connection.cursor()
-            print("MySQL 연결 완료")
+            logger.info("MySQL 연결 완료")
     
     def close_mysql(self):
         """
@@ -416,7 +419,7 @@ class CrawlTools:
             self.mysql_cursor.close()
         if self.mysql_connection:
             self.mysql_connection.close()
-        print("MySQL 연결 종료")
+        logger.info("MySQL 연결 종료")
     
     def parse_date(self, date_str):
         """
@@ -452,6 +455,7 @@ class CrawlTools:
     def import_scholarships_to_mysql(self, source_collection='scholarships_processed', limit=None):
         """
         MongoDB에서 장학금 정보를 가져와 MySQL Scholarships 테이블에 삽입합니다.
+        주최기관(organization)을 파악하여 적절한 university_id 또는 organization_id를 설정합니다.
         
         Args:
             source_collection (str): MongoDB 소스 컬렉션 이름
@@ -460,7 +464,7 @@ class CrawlTools:
         Returns:
             int: 삽입된 장학금 수
         """
-        print("=== MongoDB에서 MySQL로 장학금 데이터 이동 시작 ===\n")
+        logger.info("MongoDB에서 MySQL로 장학금 데이터 이동 시작")
         
         # MySQL 연결
         self.connect_mysql()
@@ -476,13 +480,14 @@ class CrawlTools:
         scholarships = mongo_collection.find(query).limit(limit) if limit else mongo_collection.find(query)
         
         inserted_count = 0
+        org_created_count = 0
         
         for scholarship_doc in scholarships:
             try:
                 # 글번호를 scholarship_id로 사용 (MongoDB 글번호 = MySQL scholarship_id)
                 scholarship_id = int(scholarship_doc.get('글번호', 0))
                 if scholarship_id == 0:
-                    print(f"글번호가 없는 문서 건너뜀: {scholarship_doc.get('_id')}")
+                    logger.warning(f"글번호가 없는 문서 건너뜀: {scholarship_doc.get('_id')}")
                     continue
                 
                 # 제목
@@ -495,10 +500,11 @@ class CrawlTools:
                 image_s3_urls = scholarship_doc.get('image_s3_urls', [])
                 image_url = image_s3_urls[0] if image_s3_urls else None
                 
-                # summary에서 날짜 정보 가져오기
+                # summary에서 날짜 및 주최기관 정보 가져오기
                 summary = scholarship_doc.get('summary', {})
                 start_date_str = summary.get('신청시작일', '')
                 end_date_str = summary.get('신청마감일', '')
+                organization_name = summary.get('주최기관', '')
                 
                 # 날짜 파싱
                 start_date = self.parse_date(start_date_str)
@@ -510,17 +516,34 @@ class CrawlTools:
                 if not end_date:
                     end_date = datetime(2025, 12, 31)
                 
-                # university_id 설정 (기본값: 동국대학교)
-                university_id = 1
+                # 주최기관에 따라 university_id / organization_id 결정
+                university_id = None
+                organization_id = None
+                
+                # 동국대학교 관련 키워드 확인
+                dongguk_keywords = ['동국대', '동국대학교', 'dongguk']
+                is_dongguk = any(kw in organization_name.lower() for kw in dongguk_keywords) if organization_name else False
+                
+                if is_dongguk or not organization_name or organization_name in ['미상', '']:
+                    # 동국대학교 또는 주최기관 미상인 경우
+                    university_id = 1  # 동국대학교
+                    organization_id = None
+                else:
+                    # 외부 기관인 경우
+                    university_id = None
+                    organization_id = self._get_or_create_organization(organization_name)
+                    if organization_id:
+                        org_created_count += 1
                 
                 # MySQL에 삽입 (scholarship_id 명시적 지정)
                 insert_query = """
-                INSERT INTO Scholarships (scholarship_id, university_id, scholarship_name, start_date, end_date, url, image_url)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO Scholarships (scholarship_id, university_id, organization_id, scholarship_name, start_date, end_date, url, image_url)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 self.mysql_cursor.execute(insert_query, (
                     scholarship_id,
                     university_id,
+                    organization_id,
                     scholarship_name,
                     start_date.strftime('%Y-%m-%d'),
                     end_date.strftime('%Y-%m-%d'),
@@ -530,7 +553,8 @@ class CrawlTools:
                 
                 inserted_count += 1
                 
-                print(f"장학금 삽입 완료: {scholarship_name} (ID: {scholarship_id})")
+                org_info = f"university_id={university_id}" if university_id else f"organization_id={organization_id} ({organization_name})"
+                logger.debug(f"장학금 삽입 완료: {scholarship_name} (ID: {scholarship_id}, {org_info})")
                 
                 # 키워드 연결
                 classification = scholarship_doc.get('classification', {})
@@ -538,14 +562,48 @@ class CrawlTools:
                 self._link_scholarship_keywords(scholarship_id, labels)
                 
             except Exception as e:
-                print(f"장학금 삽입 중 오류 발생: {e}")
+                logger.error(f"장학금 삽입 중 오류 발생: {e}")
                 continue
         
         self.mysql_connection.commit()
         mongo_client.close()
         
-        print(f"\n총 {inserted_count}개의 장학금이 MySQL에 삽입되었습니다.")
+        logger.info(f"MySQL 장학금 삽입 완료: {inserted_count}개 (새 기관: {org_created_count}개)")
         return inserted_count
+    
+    def _get_or_create_organization(self, organization_name):
+        """
+        Organizations 테이블에서 기관을 찾거나 새로 생성합니다.
+        
+        Args:
+            organization_name (str): 기관명
+            
+        Returns:
+            int: organization_id
+        """
+        try:
+            # 먼저 기존 기관 검색
+            self.mysql_cursor.execute(
+                "SELECT organization_id FROM Organizations WHERE organization_name = %s",
+                (organization_name,)
+            )
+            result = self.mysql_cursor.fetchone()
+            
+            if result:
+                return result[0]
+            
+            # 기관이 없으면 새로 생성
+            self.mysql_cursor.execute(
+                "INSERT INTO Organizations (organization_name) VALUES (%s)",
+                (organization_name,)
+            )
+            new_id = self.mysql_cursor.lastrowid
+            logger.info(f"새 기관 추가: {organization_name} (ID: {new_id})")
+            return new_id
+            
+        except mysql.connector.Error as err:
+            logger.error(f"기관 '{organization_name}' 처리 중 오류: {err}")
+            return None
     
     def _link_scholarship_keywords(self, scholarship_id, labels):
         """
@@ -577,5 +635,5 @@ class CrawlTools:
                 self.mysql_cursor.execute(insert_query, (scholarship_id, keyword_id))
                 
             except mysql.connector.Error as err:
-                print(f"키워드 '{label}' 연결 중 오류: {err}")
+                logger.warning(f"키워드 '{label}' 연결 중 오류: {err}")
                 continue
