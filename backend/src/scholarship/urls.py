@@ -8,7 +8,7 @@ from .views import (
 
 urlpatterns = [
     path("", ScholarshipListView.as_view()),
+    path("recommendations/", RecommendationListView.as_view()),
     path("<int:scholarship_id>/", ScholarshipDetailView.as_view()),
     path("<int:scholarship_id>/bookmark/", ScholarshipBookmarkToggleView.as_view()),
-    path("recommendations/", RecommendationListView.as_view()),
 ]
