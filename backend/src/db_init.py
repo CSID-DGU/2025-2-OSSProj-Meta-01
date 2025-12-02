@@ -89,6 +89,7 @@ sql_commands = [
     """
     CREATE TABLE IF NOT EXISTS Scholarships (
         scholarship_id INT NOT NULL AUTO_INCREMENT,
+        doc_id VARCHAR(50) NULL,
         university_id INT NULL,
         organization_id INT NULL,
         scholarship_name VARCHAR(200) NOT NULL,
@@ -862,6 +863,74 @@ SELECT
 WHERE NOT EXISTS (
     SELECT 1 FROM Bookmarks
     WHERE user_id = (SELECT user_id FROM Users WHERE id='test3')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='사장학금')
+);
+""")
+
+# 9. 추천 장학금 (테스트용 가짜)
+cursor.execute("""
+INSERT INTO Recommendations (user_id, scholarship_id)
+SELECT
+    (SELECT user_id FROM Users WHERE id='test1'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 어쩌구장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Recommendations
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test1')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 어쩌구장학금')
+);
+""")
+cursor.execute("""
+INSERT INTO Recommendations (user_id, scholarship_id)
+SELECT
+    (SELECT user_id FROM Users WHERE id='test1'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 저쩌구장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Recommendations
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test1')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 저쩌구장학금')
+);
+""")
+cursor.execute("""
+INSERT INTO Recommendations (user_id, scholarship_id)
+SELECT
+    (SELECT user_id FROM Users WHERE id='test1'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='가나장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Recommendations
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test1')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='가나장학금')
+);
+""")
+cursor.execute("""
+INSERT INTO Recommendations (user_id, scholarship_id)
+SELECT
+    (SELECT user_id FROM Users WHERE id='test1'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='다라장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Recommendations
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test1')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='다라장학금')
+);
+""")
+cursor.execute("""
+INSERT INTO Recommendations (user_id, scholarship_id)
+SELECT
+    (SELECT user_id FROM Users WHERE id='test1'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='마바장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Recommendations
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test1')
+      AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='마바장학금')
+);
+""")
+cursor.execute("""
+INSERT INTO Recommendations (user_id, scholarship_id)
+SELECT
+    (SELECT user_id FROM Users WHERE id='test1'),
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='사장학금')
+WHERE NOT EXISTS (
+    SELECT 1 FROM Recommendations
+    WHERE user_id = (SELECT user_id FROM Users WHERE id='test1')
       AND scholarship_id = (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='사장학금')
 );
 """)

@@ -12,6 +12,7 @@ class Organization(models.Model):
 
 class Scholarship(models.Model):
     scholarship_id = models.AutoField(primary_key=True)
+    doc_id = models.IntegerField(max_length=50, null=True, blank=True)
     university = models.ForeignKey(
         University, on_delete=models.SET_NULL, null=True, db_column='university_id'
     )
