@@ -234,7 +234,7 @@ class ScholarshipRecommender:
         print(f"북마크 {len(bookmarks)}개 로드")
         return bookmarks
     
-    def train(self, epochs=10, batch_size=64, lr=0.001, temperature=0.07):
+    def train(self, epochs=30, batch_size=64, lr=0.001, temperature=0.07):
         """모델 학습 (Bookmarks 기반 Contrastive Learning)"""
         users, scholarships = self.prepare_data()
         
@@ -370,7 +370,7 @@ if __name__ == "__main__":
     
     try:
         # 모델 학습
-        recommender.train(epochs=100)
+        recommender.train()
         
         # 모델 저장
         recommender.save_model()
