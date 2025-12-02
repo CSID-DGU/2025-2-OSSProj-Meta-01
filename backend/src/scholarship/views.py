@@ -22,14 +22,17 @@ class ScholarshipListView(generics.ListAPIView):
             UserKeyword.objects.filter(user=user).values_list("keyword_id", flat=True)
         )
 
-        extra_keywords = self.request.GET.get("extra_keywords")
+        extra_param = self.request.GET.get("extra_keywords")
 
-        if extra_keywords:
-            extra_list = [int(k) for k in extra_keywords.split(",") if k.isdigit()]
+        if extra_param is not None:  
+            if extra_param.strip() == "":
+                final_keywords = []
+            else:
+                final_keywords = [
+                    int(k) for k in extra_param.split(",") if k.strip().isdigit()
+                ]
         else:
-            extra_list = []
-
-        final_keywords = list(set(user_keywords + extra_list))
+            final_keywords = user_keywords
 
         if len(final_keywords) == 0:
             scholarships = Scholarship.objects.all()

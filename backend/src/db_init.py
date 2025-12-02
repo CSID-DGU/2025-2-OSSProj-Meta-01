@@ -935,6 +935,153 @@ WHERE NOT EXISTS (
 );
 """)
 
+# 10. 사용자 관심 키워드 (테스트용 가짜)
+cursor.execute("""
+INSERT INTO UserKeywords (user_id, keyword_id)
+SELECT 
+    (SELECT user_id FROM Users WHERE id='test1'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='교내장학')
+WHERE NOT EXISTS (
+    SELECT 1 FROM UserKeywords
+    WHERE user_id=(SELECT user_id FROM Users WHERE id='test1')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='교내장학')
+);
+""")
+
+# 11. 장학금 키워드(테스트용 가짜)
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 어쩌구장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='교내장학')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 어쩌구장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='교내장학')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 어쩌구장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='성적우수')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 어쩌구장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='성적우수')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 저쩌구장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='교내장학')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 저쩌구장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='교내장학')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 저쩌구장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='이공계')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='동국대학교 저쩌구장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='이공계')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='가나장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='교외장학')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='가나장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='교외장학')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='가나장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='이공계')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='가나장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='이공계')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='다라장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='교외장학')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='다라장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='교외장학')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='다라장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='인문계')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='다라장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='인문계')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='마바장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='교외장학')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='마바장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='교외장학')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='마바장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='성적우수')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='마바장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='성적우수')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='사장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='교외장학')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='사장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='교외장학')
+);
+""")
+cursor.execute("""
+INSERT INTO ScholarshipKeywords (scholarship_id, keyword_id)
+SELECT 
+    (SELECT scholarship_id FROM Scholarships WHERE scholarship_name='사장학금'),
+    (SELECT keyword_id FROM Keywords WHERE keyword='성적우수')
+WHERE NOT EXISTS (
+    SELECT 1 FROM ScholarshipKeywords
+    WHERE scholarship_id=(SELECT scholarship_id FROM Scholarships WHERE scholarship_name='사장학금')
+      AND keyword_id=(SELECT keyword_id FROM Keywords WHERE keyword='성적우수')
+);
+""")
+
 connection.commit()
 cursor.close()
 connection.close()
