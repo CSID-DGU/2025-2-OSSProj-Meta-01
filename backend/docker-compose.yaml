@@ -117,6 +117,48 @@ services:
     networks:
       - app-network
 
+  # 알림 스케줄러
+  scheduler:
+    image: python:3.11
+    container_name: notification_scheduler
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      sh -c '
+        apt-get update &&
+        apt-get install -y default-libmysqlclient-dev gcc &&
+        pip install --no-cache-dir -r /app/src/requirements_scheduler.txt;
+        echo "[Scheduler] Django 설치 완료";
+        while true; do
+          CURRENT_HOUR=$$(date +%H);
+          if [ "$$CURRENT_HOUR" = "09" ]; then
+            echo ">>> 오전 9시: 알림 실행";
+            python /app/src/manage.py send_notifications;
+            sleep 3600;
+          else
+            sleep 300;
+          fi
+        done
+      '
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: meta_mysql_database
+      MYSQL_USER: meta_mysql_user
+      MYSQL_PASSWORD: meta_mysql_password
+    networks:
+      - app-network
+
+volumes:
+  mongodb_data:  # MongoDB 데이터를 저장할 볼륨
+    driver: local
+  mongodb_config:  # MongoDB 설정을 저장할 볼륨
+    driver: local
+
 # 네트워크 정의
 networks:
   app-network:  # 애플리케이션 네트워크

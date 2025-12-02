@@ -11,9 +11,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import pymysql
-pymysql.install_as_MySQLdb()
-
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -86,11 +83,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'meta_mysql_database',
-        'USER': 'meta_mysql_user',
-        'PASSWORD': 'meta_mysql_password',
-        'HOST': '127.0.0.1',
-        'PORT': '3307',
+        'NAME': os.getenv("MYSQL_DATABASE"),
+        'USER': os.getenv("MYSQL_USER"),
+        'PASSWORD': os.getenv("MYSQL_PASSWORD"),
+        'HOST': os.getenv("MYSQL_HOST", "mysql"),
+        'PORT': os.getenv("MYSQL_PORT", "3306"),
         'OPTIONS': {
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
         },
