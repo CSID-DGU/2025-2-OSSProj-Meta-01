@@ -131,7 +131,7 @@ services:
       sh -c '
         apt-get update &&
         apt-get install -y default-libmysqlclient-dev gcc &&
-        pip install --no-cache-dir -r /app/src/requirements_scheduler.txt;
+        pip install --no-cache-dir -r /app/requirements.txt;
         echo "[Scheduler] Django 설치 완료";
         while true; do
           CURRENT_HOUR=$$(date +%H);
