@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'authentication',
     'mypage',
     'notification',
+    'scholarship',
 ]
 
 AUTH_USER_MODEL = 'authentication.User'
@@ -138,6 +139,12 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+
+# MONGODB CONFIG
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://admin:admin123@mongodb:27017/")
+MONGODB_NAME = os.getenv("MONGODB_NAME", "dongguk_db")
+MONGODB_COLLECTION = os.getenv("MONGODB_COLLECTION", "scholarship_details")
 
 
 # ★★★ CORS CONFIG (프론트와 연동 핵심)
