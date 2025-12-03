@@ -108,6 +108,9 @@ const Signup: React.FC = () => {
         newErrors.gpa = "학점은 0~4.50 사이여야 합니다.";
     }
 
+    // 🔥 추가된 부분: 소득분위 필수 처리
+    if (!incomeLevel.trim()) newErrors.incomeLevel = "소득분위를 선택해주세요.";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -129,11 +132,8 @@ const Signup: React.FC = () => {
       major: Number(major),
       year,
       gpa: Number(gpa),
+      income_level: incomeLevel, // 🔥 필수값이라 조건문 제거
     };
-
-    if (incomeLevel.trim() !== "") {
-      signupData.income_level = incomeLevel;
-    }
 
     navigate("/signup-step2", { state: signupData });
   };
@@ -246,7 +246,7 @@ const Signup: React.FC = () => {
               borderRadius: "8px",
               padding: "12px",
               marginBottom: "0.4rem",
-              color: major ? "#333" : "#888",
+              color: year ? "#333" : "#888",
             }}
           >
             <option value="">학년 선택</option>
@@ -271,9 +271,13 @@ const Signup: React.FC = () => {
           />
           {errors.gpa && <p style={errorText}>{errors.gpa}</p>}
 
+          {/* 소득분위 영역 */}
           <select
             value={incomeLevel}
-            onChange={(e) => setIncomeLevel(e.target.value)}
+            onChange={(e) => {
+              setIncomeLevel(e.target.value);
+              setErrors((prev) => ({ ...prev, incomeLevel: "" }));
+            }}
             style={{
               ...inputWithError("incomeLevel"),
               width: "100%",
@@ -283,7 +287,7 @@ const Signup: React.FC = () => {
               color: incomeLevel ? "#333" : "#888",
             }}
           >
-            <option value="">소득분위 (선택 없음)</option>
+            <option value="">소득분위 선택</option>
             <option value="1분위">1분위</option>
             <option value="2분위">2분위</option>
             <option value="3분위">3분위</option>
@@ -295,6 +299,7 @@ const Signup: React.FC = () => {
             <option value="9분위">9분위</option>
             <option value="10분위">10분위</option>
           </select>
+          {errors.incomeLevel && <p style={errorText}>{errors.incomeLevel}</p>}
 
           <button style={buttonStyle} onClick={handleNext}>
             다음 단계

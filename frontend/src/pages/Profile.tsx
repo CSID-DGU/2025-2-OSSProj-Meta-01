@@ -74,18 +74,17 @@ export const majorOptions = [
 const yearOptions = ["1", "2", "3", "4"];
 
 const incomeOptions = [
-  { label: "1분위", value: 1 },
-  { label: "2분위", value: 2 },
-  { label: "3분위", value: 3 },
-  { label: "4분위", value: 4 },
-  { label: "5분위", value: 5 },
-  { label: "6분위", value: 6 },
-  { label: "7분위", value: 7 },
-  { label: "8분위", value: 8 },
-  { label: "9분위", value: 9 },
-  { label: "10분위", value: 10 },
+  { label: "1분위", value: "1분위" },
+  { label: "2분위", value: "2분위" },
+  { label: "3분위", value: "3분위" },
+  { label: "4분위", value: "4분위" },
+  { label: "5분위", value: "5분위" },
+  { label: "6분위", value: "6분위" },
+  { label: "7분위", value: "7분위" },
+  { label: "8분위", value: "8분위" },
+  { label: "9분위", value: "9분위" },
+  { label: "10분위", value: "10분위" },
 ];
-
 type Profile = {
   name: string;
   major: string | number;
@@ -335,10 +334,10 @@ const ProfilePage: React.FC = () => {
     const res = await apiRequest("http://127.0.0.1:8000/mypage/me/", {
       method: "PATCH",
       body: JSON.stringify({
-        major: form.major,
-        year: form.grade,
+        major: Number(form.major),
+        year: String(form.grade),
         gpa: form.gpa,
-        income_level: form.incomeLevel,
+        income_level: form.incomeLevel === "" ? null : form.incomeLevel,
         receive_notifications: form.receiveNotifications,
       }),
     });
@@ -348,7 +347,9 @@ const ProfilePage: React.FC = () => {
       setEditInfo(false);
       loadMyInfo();
     } else {
-      alert("저장 실패");
+      const errorData = await res.json();
+      console.log("❌ PATCH ERROR:", errorData); // ⭐ 에러확인
+      alert("저장 실패: " + JSON.stringify(errorData));
     }
   };
 
@@ -614,9 +615,8 @@ const ProfilePage: React.FC = () => {
                   }
                   style={selectStyle}
                 >
-                  {/* <option value="">선택</option> */}
                   {incomeOptions.map((opt) => (
-                    <option key={opt.label} value={opt.label}>
+                    <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
