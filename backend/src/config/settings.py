@@ -11,9 +11,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import pymysql
-pymysql.install_as_MySQLdb()
-
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -42,6 +39,7 @@ INSTALLED_APPS = [
     'authentication',
     'mypage',
     'notification',
+    'scholarship',
 ]
 
 AUTH_USER_MODEL = 'authentication.User'
@@ -86,11 +84,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'meta_mysql_database',
-        'USER': 'meta_mysql_user',
-        'PASSWORD': 'meta_mysql_password',
-        'HOST': '127.0.0.1',
-        'PORT': '3307',
+        'NAME': os.getenv("MYSQL_DATABASE"),
+        'USER': os.getenv("MYSQL_USER"),
+        'PASSWORD': os.getenv("MYSQL_PASSWORD"),
+        'HOST': os.getenv("MYSQL_HOST", "mysql"),
+        'PORT': os.getenv("MYSQL_PORT", "3306"),
         'OPTIONS': {
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
         },
@@ -141,6 +139,12 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+
+# MONGODB CONFIG
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://admin:admin123@mongodb:27017/")
+MONGODB_NAME = os.getenv("MONGODB_NAME", "dongguk_db")
+MONGODB_COLLECTION = os.getenv("MONGODB_COLLECTION", "scholarship_details")
 
 
 # ★★★ CORS CONFIG (프론트와 연동 핵심)

@@ -20,4 +20,5 @@ urlpatterns = [
     path('auth/', include('authentication.urls')),
     path('mypage/', include('mypage.urls')),
     path("notification/", include("notification.urls")),
+    path("scholarships/", include("scholarship.urls")),
 ]

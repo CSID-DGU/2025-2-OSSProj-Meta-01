@@ -48,6 +48,8 @@ from crawler.dreamspon_crawler import DreamsponCrawler
 from ai.parsing_tools import ParsingTools
 from ai.llm_tools import LLMSummaryTool, LLMClassificationTool
 from ai.create_user_dummies import CreateDummies
+from ai.recommendation_model import ScholarshipRecommender
+from ai.batch_recommend import BatchRecommender
 
 # 지원하는 크롤러 소스
 CRAWLER_SOURCES = {
@@ -438,7 +440,8 @@ class InitialSetupPipeline:
     # 전체 파이프라인 실행
     # =========================================================================
     
-    def run(self, max_pages=1, num_users=100, skip_crawl=False):
+    def run(self, max_pages=1, num_users=100, skip_crawl=False,
+            train_recommender=False, batch_recommend=False):
         """
         전체 파이프라인 실행
         
@@ -479,6 +482,25 @@ class InitialSetupPipeline:
             
             # Phase 3: 더미 데이터 생성
             user_count = self.phase3_create_dummies(num_users=num_users)
+
+            # (선택) 추천 모델 학습
+            if train_recommender:
+                self._print_step_header(9, "추천 모델 학습")
+                recommender = ScholarshipRecommender()
+                try:
+                    recommender.train()
+                    recommender.save_model()
+                finally:
+                    recommender.close()
+
+            # (선택) 배치 추천 계산 및 저장
+            if batch_recommend:
+                self._print_step_header(10, "배치 추천 계산 및 저장")
+                batch = BatchRecommender()
+                try:
+                    batch.run()
+                finally:
+                    batch.close()
             
             # 완료 메시지
             elapsed = time.time() - start_time
@@ -605,6 +627,16 @@ Phase 설명:
         help='특정 Phase만 실행 (1: 크롤링/AI, 2: MySQL동기화, 3: 더미데이터)'
     )
     parser.add_argument(
+        '--train-recommender',
+        action='store_true',
+        help='Phase 3 이후 추천 모델 학습까지 실행'
+    )
+    parser.add_argument(
+        '--batch-recommend',
+        action='store_true',
+        help='추천 모델 학습 후 배치 추천 계산까지 실행'
+    )
+    parser.add_argument(
         '--debug',
         action='store_true',
         help='디버그 로깅 활성화'
@@ -631,7 +663,9 @@ Phase 설명:
         pipeline.run(
             max_pages=args.max_pages,
             num_users=args.num_users,
-            skip_crawl=args.skip_crawl
+            skip_crawl=args.skip_crawl,
+            train_recommender=args.train_recommender,
+            batch_recommend=args.batch_recommend,
         )
 
 
