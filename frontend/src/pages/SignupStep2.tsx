@@ -6,6 +6,8 @@ const SignupStep2: React.FC = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
 
+  console.log("STEP2 state:", state);
+
   const [agree, setAgree] = useState(false);
   const [channel, setChannel] = useState("");
   const [university, setUniversity] = useState("");
@@ -42,7 +44,6 @@ const SignupStep2: React.FC = () => {
       gpa: state.gpa,
       income_level: state.income_level,
       receive_notifications: agree,
-
       notification_channel: channel,
       university: university,
     };
@@ -86,6 +87,7 @@ const SignupStep2: React.FC = () => {
           }}
         />
         <h2 style={{ marginBottom: "1.5rem", color: "#333" }}>회원가입</h2>
+
         <div style={{ marginBottom: "1.5rem", textAlign: "left" }}>
           <label style={{ fontSize: "0.9rem", color: "#333" }}>
             <input
@@ -103,8 +105,14 @@ const SignupStep2: React.FC = () => {
         </label>
         <select
           value={channel}
-          onChange={(e) => setChannel(e.target.value)}
-          style={selectWithError("channel")}
+          onChange={(e) => {
+            setChannel(e.target.value);
+            setErrors((prev) => ({ ...prev, channel: "" }));
+          }}
+          style={{
+            ...selectWithError("channel"),
+            color: channel ? "#333" : "#888",
+          }}
         >
           <option value="">채널을 선택하세요</option>
           <option value="sms">문자</option>
@@ -116,8 +124,14 @@ const SignupStep2: React.FC = () => {
         </label>
         <select
           value={university}
-          onChange={(e) => setUniversity(e.target.value)}
-          style={selectWithError("university")}
+          onChange={(e) => {
+            setUniversity(e.target.value);
+            setErrors((prev) => ({ ...prev, university: "" }));
+          }}
+          style={{
+            ...selectWithError("university"),
+            color: university ? "#333" : "#888",
+          }}
         >
           <option value="">학교를 선택하세요</option>
           <option value="dongguk">동국대학교</option>
@@ -133,7 +147,16 @@ const SignupStep2: React.FC = () => {
 
           <button
             style={backButtonStyle}
-            onClick={() => navigate("/signup", { state: state })}
+            onClick={() =>
+              navigate("/signup", {
+                state: {
+                  ...state,
+                  agree: agree,
+                  channel: channel,
+                  university: university,
+                },
+              })
+            }
           >
             이전 단계
           </button>
@@ -215,7 +238,7 @@ const selectStyle: React.CSSProperties = {
   border: "1px solid #ccc",
   backgroundColor: "#fff",
   outline: "none",
-  color: "#333",
+  color: "#888",
 };
 
 const errorText: React.CSSProperties = {
