@@ -28,19 +28,16 @@ const color = {
 
 const chipBtn: React.CSSProperties = {
   padding: "8px 12px",
-  border: `1px solid ${color.border}`,
   borderRadius: 10,
   background: "#fff",
   cursor: "pointer",
   whiteSpace: "nowrap",
   color: color.text,
   fontSize: 13,
-  transition: "all 0.15s ease",
 };
 
 const selectedChip: React.CSSProperties = {
   ...chipBtn,
-  borderColor: color.activeBorder,
   fontWeight: 600,
 };
 
@@ -400,7 +397,6 @@ const tabs: React.CSSProperties = {
 const tab: React.CSSProperties = {
   padding: "8px 12px",
   borderRadius: 8,
-  border: `1px solid ${color.border}`,
   background: "#fff",
   cursor: "pointer",
   color: color.text,
@@ -410,7 +406,6 @@ const tab: React.CSSProperties = {
 tab[":hover" as any] = { background: color.hover };
 const tabActive: React.CSSProperties = {
   ...tab,
-  borderColor: color.activeBorder,
   fontWeight: 600,
 };
 
