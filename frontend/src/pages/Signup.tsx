@@ -2,6 +2,72 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../images/logo.png";
 
+export const majorOptions = [
+  { major_id: 1, major_name: "불교학과" },
+  { major_id: 2, major_name: "문화유산학과" },
+  { major_id: 3, major_name: "국어국문문예창작학부" },
+  { major_id: 4, major_name: "영어영문학부" },
+  { major_id: 5, major_name: "일본학과" },
+  { major_id: 6, major_name: "중어중문학과" },
+  { major_id: 7, major_name: "철학과" },
+  { major_id: 8, major_name: "사학과" },
+  { major_id: 9, major_name: "수학과" },
+  { major_id: 10, major_name: "화학과" },
+  { major_id: 11, major_name: "통계학과" },
+  { major_id: 12, major_name: "물리반도체과학부" },
+  { major_id: 13, major_name: "물리학과" },
+  { major_id: 14, major_name: "법학과" },
+  { major_id: 15, major_name: "정치외교학전공" },
+  { major_id: 16, major_name: "행정학전공" },
+  { major_id: 17, major_name: "북한학전공" },
+  { major_id: 18, major_name: "경제학과" },
+  { major_id: 19, major_name: "국제통상학과" },
+  { major_id: 20, major_name: "사회학전공" },
+  { major_id: 21, major_name: "미디어커뮤니케이션학전공" },
+  { major_id: 22, major_name: "식품산업관리학과" },
+  { major_id: 23, major_name: "광고홍보학과" },
+  { major_id: 24, major_name: "사회복지학과" },
+  { major_id: 25, major_name: "경찰행정학부" },
+  { major_id: 26, major_name: "경영학과" },
+  { major_id: 27, major_name: "회계학과" },
+  { major_id: 28, major_name: "경영정보학과" },
+  { major_id: 29, major_name: "바이오환경과학과" },
+  { major_id: 30, major_name: "생명과학과" },
+  { major_id: 31, major_name: "식품생명공학과" },
+  { major_id: 32, major_name: "의생명공학과" },
+  { major_id: 33, major_name: "전자전기공학부" },
+  { major_id: 34, major_name: "정보통신공학과" },
+  { major_id: 35, major_name: "건설환경공학과" },
+  { major_id: 36, major_name: "화공생물공학과" },
+  { major_id: 37, major_name: "기계로봇에너지공학과" },
+  { major_id: 38, major_name: "건축공학부" },
+  { major_id: 39, major_name: "산업시스템공학과" },
+  { major_id: 40, major_name: "에너지신소재공학과" },
+  { major_id: 41, major_name: "컴퓨터AI학부" },
+  { major_id: 42, major_name: "시스템반도체학부" },
+  { major_id: 43, major_name: "의료인공지능공학과" },
+  { major_id: 44, major_name: "지능형네트워크융합학과" },
+  { major_id: 45, major_name: "지능IoT학과" },
+  { major_id: 46, major_name: "교육학과" },
+  { major_id: 47, major_name: "국어교육과" },
+  { major_id: 48, major_name: "역사교육과" },
+  { major_id: 49, major_name: "지리교육과" },
+  { major_id: 50, major_name: "수학교육과" },
+  { major_id: 51, major_name: "가정교육과" },
+  { major_id: 52, major_name: "체육교육과" },
+  { major_id: 53, major_name: "미술학부" },
+  { major_id: 54, major_name: "연극학부" },
+  { major_id: 55, major_name: "영화영상학과" },
+  { major_id: 56, major_name: "스포츠문화학과" },
+  { major_id: 57, major_name: "한국음악과" },
+  { major_id: 58, major_name: "약학과" },
+  { major_id: 59, major_name: "융합보안학과" },
+  { major_id: 60, major_name: "사회복지상담학과" },
+  { major_id: 61, major_name: "글로벌무역학과" },
+  { major_id: 62, major_name: "다르마칼리지" },
+  { major_id: 63, major_name: "열린전공학부" },
+];
+
 const Signup: React.FC = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
@@ -29,9 +95,9 @@ const Signup: React.FC = () => {
       newErrors.phone = "전화번호는 숫자 10~11자리여야 합니다.";
     if (!email.includes("@"))
       newErrors.email = "올바른 이메일 형식이 아닙니다.";
-    if (!major.trim() || isNaN(Number(major)))
-      newErrors.major = "학과 번호는 숫자로 입력해주세요.";
-    if (!year.trim()) newErrors.year = "학년을 입력해주세요.";
+
+    if (!major.trim()) newErrors.major = "학과를 선택해주세요.";
+    if (!year.trim()) newErrors.year = "학년을 선택해주세요.";
 
     if (!gpa.trim()) newErrors.gpa = "학점을 입력해주세요.";
     else if (isNaN(Number(gpa)))
@@ -45,6 +111,11 @@ const Signup: React.FC = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const inputWithError = (field: string) => ({
+    ...inputStyle,
+    border: errors[field] ? "1px solid red" : "1px solid #ccc",
+  });
 
   const handleNext = () => {
     if (!validateFields()) return;
@@ -67,11 +138,6 @@ const Signup: React.FC = () => {
     navigate("/signup-step2", { state: signupData });
   };
 
-  const inputWithError = (field: string) => ({
-    ...inputStyle,
-    border: errors[field] ? "1px solid red" : "1px solid #ccc",
-  });
-
   return (
     <div style={containerStyle}>
       <div style={overlayStyle} />
@@ -89,7 +155,10 @@ const Signup: React.FC = () => {
             placeholder="ID"
             style={inputWithError("id")}
             value={id}
-            onChange={(e) => setId(e.target.value)}
+            onChange={(e) => {
+              setId(e.target.value);
+              setErrors((prev) => ({ ...prev, id: "" }));
+            }}
           />
           {errors.id && <p style={errorText}>{errors.id}</p>}
 
@@ -98,7 +167,10 @@ const Signup: React.FC = () => {
             placeholder="비밀번호"
             style={inputWithError("password")}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setErrors((prev) => ({ ...prev, password: "" }));
+            }}
           />
           {errors.password && <p style={errorText}>{errors.password}</p>}
 
@@ -107,7 +179,10 @@ const Signup: React.FC = () => {
             placeholder="이름"
             style={inputWithError("userName")}
             value={userName}
-            onChange={(e) => setUserName(e.target.value)}
+            onChange={(e) => {
+              setUserName(e.target.value);
+              setErrors((prev) => ({ ...prev, userName: "" }));
+            }}
           />
           {errors.userName && <p style={errorText}>{errors.userName}</p>}
 
@@ -116,7 +191,10 @@ const Signup: React.FC = () => {
             placeholder="전화번호"
             style={inputWithError("phone")}
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              setErrors((prev) => ({ ...prev, phone: "" }));
+            }}
           />
           {errors.phone && <p style={errorText}>{errors.phone}</p>}
 
@@ -125,26 +203,60 @@ const Signup: React.FC = () => {
             placeholder="이메일"
             style={inputWithError("email")}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setErrors((prev) => ({ ...prev, email: "" }));
+            }}
           />
           {errors.email && <p style={errorText}>{errors.email}</p>}
 
-          <input
-            type="text"
-            placeholder="학과 번호 (예: 1)"
-            style={inputWithError("major")}
+          <select
             value={major}
-            onChange={(e) => setMajor(e.target.value)}
-          />
+            onChange={(e) => {
+              setMajor(e.target.value);
+              setErrors((prev) => ({ ...prev, major: "" }));
+            }}
+            style={{
+              ...inputWithError("major"),
+              width: "100%",
+              borderRadius: "8px",
+              padding: "12px",
+              marginBottom: "0.4rem",
+              color: major ? "#333" : "#888",
+            }}
+          >
+            <option value="">학과 선택</option>
+            {majorOptions.map((m) => (
+              <option key={m.major_id} value={m.major_id}>
+                {m.major_name}
+              </option>
+            ))}
+          </select>
           {errors.major && <p style={errorText}>{errors.major}</p>}
 
-          <input
-            type="text"
-            placeholder="학년 (예: 2)"
-            style={inputWithError("year")}
+          <select
             value={year}
-            onChange={(e) => setYear(e.target.value)}
-          />
+            onChange={(e) => {
+              setYear(e.target.value);
+              setErrors((prev) => ({ ...prev, year: "" }));
+            }}
+            style={{
+              ...inputWithError("year"),
+              width: "100%",
+              borderRadius: "8px",
+              padding: "12px",
+              marginBottom: "0.4rem",
+              color: major ? "#333" : "#888",
+            }}
+          >
+            <option value="">학년 선택</option>
+            <option value="1">1학년</option>
+            <option value="2">2학년</option>
+            <option value="3">3학년</option>
+            <option value="4">4학년</option>
+            <option value="5">5학년</option>
+            <option value="6">6학년</option>
+          </select>
           {errors.year && <p style={errorText}>{errors.year}</p>}
 
           <input
@@ -152,7 +264,10 @@ const Signup: React.FC = () => {
             placeholder="학점 (예: 3.0)"
             style={inputWithError("gpa")}
             value={gpa}
-            onChange={(e) => setGpa(e.target.value)}
+            onChange={(e) => {
+              setGpa(e.target.value);
+              setErrors((prev) => ({ ...prev, gpa: "" }));
+            }}
           />
           {errors.gpa && <p style={errorText}>{errors.gpa}</p>}
 
