@@ -5,13 +5,94 @@ import logo from "../images/logo.png";
 import arrowIcon from "../images/Arrow.png";
 import { apiRequest } from "../api/apiClient";
 
-/* ------------------- 타입 정의 ------------------- */
+export const majorOptions = [
+  { major_id: 1, major_name: "불교학과" },
+  { major_id: 2, major_name: "문화유산학과" },
+  { major_id: 3, major_name: "국어국문문예창작학부" },
+  { major_id: 4, major_name: "영어영문학부" },
+  { major_id: 5, major_name: "일본학과" },
+  { major_id: 6, major_name: "중어중문학과" },
+  { major_id: 7, major_name: "철학과" },
+  { major_id: 8, major_name: "사학과" },
+  { major_id: 9, major_name: "수학과" },
+  { major_id: 10, major_name: "화학과" },
+  { major_id: 11, major_name: "통계학과" },
+  { major_id: 12, major_name: "물리반도체과학부" },
+  { major_id: 13, major_name: "물리학과" },
+  { major_id: 14, major_name: "법학과" },
+  { major_id: 15, major_name: "정치외교학전공" },
+  { major_id: 16, major_name: "행정학전공" },
+  { major_id: 17, major_name: "북한학전공" },
+  { major_id: 18, major_name: "경제학과" },
+  { major_id: 19, major_name: "국제통상학과" },
+  { major_id: 20, major_name: "사회학전공" },
+  { major_id: 21, major_name: "미디어커뮤니케이션학전공" },
+  { major_id: 22, major_name: "식품산업관리학과" },
+  { major_id: 23, major_name: "광고홍보학과" },
+  { major_id: 24, major_name: "사회복지학과" },
+  { major_id: 25, major_name: "경찰행정학부" },
+  { major_id: 26, major_name: "경영학과" },
+  { major_id: 27, major_name: "회계학과" },
+  { major_id: 28, major_name: "경영정보학과" },
+  { major_id: 29, major_name: "바이오환경과학과" },
+  { major_id: 30, major_name: "생명과학과" },
+  { major_id: 31, major_name: "식품생명공학과" },
+  { major_id: 32, major_name: "의생명공학과" },
+  { major_id: 33, major_name: "전자전기공학부" },
+  { major_id: 34, major_name: "정보통신공학과" },
+  { major_id: 35, major_name: "건설환경공학과" },
+  { major_id: 36, major_name: "화공생물공학과" },
+  { major_id: 37, major_name: "기계로봇에너지공학과" },
+  { major_id: 38, major_name: "건축공학부" },
+  { major_id: 39, major_name: "산업시스템공학과" },
+  { major_id: 40, major_name: "에너지신소재공학과" },
+  { major_id: 41, major_name: "컴퓨터AI학부" },
+  { major_id: 42, major_name: "시스템반도체학부" },
+  { major_id: 43, major_name: "의료인공지능공학과" },
+  { major_id: 44, major_name: "지능형네트워크융합학과" },
+  { major_id: 45, major_name: "지능IoT학과" },
+  { major_id: 46, major_name: "교육학과" },
+  { major_id: 47, major_name: "국어교육과" },
+  { major_id: 48, major_name: "역사교육과" },
+  { major_id: 49, major_name: "지리교육과" },
+  { major_id: 50, major_name: "수학교육과" },
+  { major_id: 51, major_name: "가정교육과" },
+  { major_id: 52, major_name: "체육교육과" },
+  { major_id: 53, major_name: "미술학부" },
+  { major_id: 54, major_name: "연극학부" },
+  { major_id: 55, major_name: "영화영상학과" },
+  { major_id: 56, major_name: "스포츠문화학과" },
+  { major_id: 57, major_name: "한국음악과" },
+  { major_id: 58, major_name: "약학과" },
+  { major_id: 59, major_name: "융합보안학과" },
+  { major_id: 60, major_name: "사회복지상담학과" },
+  { major_id: 61, major_name: "글로벌무역학과" },
+  { major_id: 62, major_name: "다르마칼리지" },
+  { major_id: 63, major_name: "열린전공학부" },
+];
+
+const yearOptions = ["1", "2", "3", "4"];
+
+const incomeOptions = [
+  { label: "1분위", value: 1 },
+  { label: "2분위", value: 2 },
+  { label: "3분위", value: 3 },
+  { label: "4분위", value: 4 },
+  { label: "5분위", value: 5 },
+  { label: "6분위", value: 6 },
+  { label: "7분위", value: 7 },
+  { label: "8분위", value: 8 },
+  { label: "9분위", value: 9 },
+  { label: "10분위", value: 10 },
+];
+
 type Profile = {
   name: string;
-  major: string;
+  major: string | number;
   grade: string;
   gpa: string;
   incomeLevel: string;
+  receiveNotifications: boolean;
 };
 
 type ScholarshipItem = {
@@ -23,21 +104,17 @@ type ScholarshipItem = {
   url?: string;
 };
 
-/* ---- 키워드 타입 ---- */
-// 전체 키워드 목록용
 type KeywordBase = {
   keyword_id: number;
   keyword: string;
 };
 
-// 사용자 키워드 목록용
 type UserKeyword = {
   user_keyword_id: number;
   keyword_id: number;
   keyword: string;
 };
 
-// 화면에서 사용할 통합 타입
 type Keyword = {
   keyword_id: number;
   keyword: string;
@@ -45,7 +122,6 @@ type Keyword = {
   user_keyword_id?: number | null;
 };
 
-/* ---- 자격증 타입 ---- */
 type CertBase = {
   certification_id: number;
   certification_name: string;
@@ -66,7 +142,6 @@ type UserCertDetail = {
   expiration_date: string | null;
 };
 
-/* ---- 북마크 타입 ---- */
 type UserBookmark = {
   bookmark_id: number;
   scholarship_id: number;
@@ -104,7 +179,9 @@ const ProfilePage: React.FC = () => {
     grade: "",
     gpa: "",
     incomeLevel: "",
+    receiveNotifications: true,
   });
+
   const [editInfo, setEditInfo] = useState(false);
 
   /* ------------------- 비밀번호 ------------------- */
@@ -191,10 +268,13 @@ const ProfilePage: React.FC = () => {
     // 백엔드 응답 구조에 맞게 일부만 매핑 (이름/학과는 필요 시 추가 작업)
     setForm({
       name: data.user_name ?? "",
-      major: data.major_name ?? "",
+      major:
+        majorOptions.find((m) => m.major_name === data.major_name)?.major_id ??
+        "",
       grade: String(data.year ?? ""),
       gpa: String(data.gpa ?? ""),
-      incomeLevel: String(data.income_level ?? ""),
+      incomeLevel: data.income_level ?? "",
+      receiveNotifications: Boolean(data.receive_notifications),
     });
   };
 
@@ -255,8 +335,11 @@ const ProfilePage: React.FC = () => {
     const res = await apiRequest("http://127.0.0.1:8000/mypage/me/", {
       method: "PATCH",
       body: JSON.stringify({
+        major: form.major,
+        year: form.grade,
         gpa: form.gpa,
         income_level: form.incomeLevel,
+        receive_notifications: form.receiveNotifications,
       }),
     });
 
@@ -472,38 +555,111 @@ const ProfilePage: React.FC = () => {
         <section style={card}>
           <h3 style={sectionTitle}>내 정보</h3>
 
-          <div style={formWrap}>
-            <EditableInput
-              label="이름"
-              value={form.name}
-              readOnly={!editInfo}
-              onChange={(v) => setForm({ ...form, name: v })}
-            />
-            <EditableInput
-              label="학과"
-              value={form.major}
-              readOnly={!editInfo}
-              onChange={(v) => setForm({ ...form, major: v })}
-            />
-            <EditableInput
-              label="학년"
-              value={form.grade}
-              readOnly={!editInfo}
-              onChange={(v) => setForm({ ...form, grade: v })}
-            />
-            <EditableInput
-              label="GPA"
-              value={form.gpa}
-              readOnly={!editInfo}
-              onChange={(v) => setForm({ ...form, gpa: v })}
-            />
-            <EditableInput
-              label="소득분위"
-              value={form.incomeLevel}
-              readOnly={!editInfo}
-              onChange={(v) => setForm({ ...form, incomeLevel: v })}
-            />
-          </div>
+          {editInfo ? (
+            <div style={formWrap}>
+              {/* 이름 (수정 불가) */}
+              <ReadOnlyRow label="이름" value={form.name} />
+
+              {/* 학과 드롭다운 */}
+              <label style={{ display: "grid", gap: 4 }}>
+                <span style={labelText}>학과</span>
+                <select
+                  value={form.major ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, major: Number(e.target.value) })
+                  }
+                  style={selectStyle}
+                >
+                  <option value="">학과 선택</option>
+                  {majorOptions.map((m) => (
+                    <option key={m.major_id} value={m.major_id}>
+                      {m.major_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* 학년 드롭다운 */}
+              <label style={{ display: "grid", gap: 4 }}>
+                <span style={labelText}>학년</span>
+                <select
+                  value={form.grade}
+                  onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                  style={selectStyle}
+                >
+                  <option value="">학년 선택</option>
+                  {yearOptions.map((y) => (
+                    <option key={y} value={y}>
+                      {y}학년
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* GPA */}
+              <EditableInput
+                label="GPA"
+                value={form.gpa}
+                readOnly={false}
+                onChange={(v) => setForm({ ...form, gpa: v })}
+              />
+
+              {/* 소득분위 */}
+              <label style={{ display: "grid", gap: 4 }}>
+                <span style={labelText}>소득분위</span>
+                <select
+                  value={form.incomeLevel}
+                  onChange={(e) =>
+                    setForm({ ...form, incomeLevel: e.target.value })
+                  }
+                  style={selectStyle}
+                >
+                  {/* <option value="">선택</option> */}
+                  {incomeOptions.map((opt) => (
+                    <option key={opt.label} value={opt.label}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* 알림 수신 여부 */}
+              <label style={{ display: "grid", gap: 4 }}>
+                <span style={labelText}>알림 수신 여부</span>
+                <select
+                  value={form.receiveNotifications ? "true" : "false"}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      receiveNotifications: e.target.value === "true",
+                    })
+                  }
+                  style={selectStyle}
+                >
+                  <option value="true">허용</option>
+                  <option value="false">거부</option>
+                </select>
+              </label>
+            </div>
+          ) : (
+            <div style={formWrap}>
+              <ReadOnlyRow label="이름" value={form.name} />
+              <ReadOnlyRow
+                label="학과"
+                value={
+                  majorOptions.find((m) => m.major_id === Number(form.major))
+                    ?.major_name || ""
+                }
+              />
+              <ReadOnlyRow label="학년" value={`${form.grade}학년`} />
+              <ReadOnlyRow label="GPA" value={form.gpa} />
+              <ReadOnlyRow label="소득분위" value={form.incomeLevel} />
+              <ReadOnlyRow
+                label="알림 수신 여부"
+                value={form.receiveNotifications ? "허용" : "거부"}
+              />
+            </div>
+          )}
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
             {editInfo ? (
@@ -755,7 +911,30 @@ const EditableInput = ({
         borderRadius: 12,
         padding: "10px",
         height: 42,
-        background: readOnly ? "#fff" : "#fef2e8",
+        background: "#fff",
+      }}
+    />
+  </label>
+);
+
+const ReadOnlyRow = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) => (
+  <label style={{ display: "grid", gap: 4 }}>
+    <span style={{ fontSize: 12, color: "#6b7280" }}>{label}</span>
+    <input
+      value={value}
+      readOnly
+      style={{
+        border: "1px solid #e5e7eb",
+        borderRadius: 12,
+        padding: "10px",
+        height: 42,
+        background: "#fff",
       }}
     />
   </label>
@@ -811,6 +990,10 @@ const AddCertModal: React.FC<{
             ))}
           </select>
 
+          <label style={{ fontSize: "14px", color: "#555", marginLeft: "5px" }}>
+            취득일
+          </label>
+
           <input
             type="date"
             value={form.acquired_date}
@@ -827,6 +1010,9 @@ const AddCertModal: React.FC<{
             style={modalInput}
           />
 
+          <label style={{ fontSize: "14px", color: "#555", marginLeft: "5px" }}>
+            만료일(선택)
+          </label>
           <input
             type="date"
             value={form.expiration_date}
@@ -1003,29 +1189,75 @@ const formWrap: React.CSSProperties = {
   gap: 14,
 };
 
-const editBtn: React.CSSProperties = {
-  padding: "8px 16px",
-  borderRadius: 10,
-  border: `1.5px solid ${color.orange}`,
-  background: color.orange,
-  color: "#fff",
+/* ----------------------------------------------------------- */
+/*                input + select 공통 필드 스타일              */
+/* ----------------------------------------------------------- */
+
+const fieldStyle: React.CSSProperties = {
+  height: 52,
+  borderRadius: 12,
+  border: "1px solid #e5e7eb",
+  padding: "0 12px",
+  fontSize: 15,
+  background: "#fff",
+  outline: "none",
+  display: "flex",
+  alignItems: "center",
+  lineHeight: "52px", // ★ input 높이 정확히 통일
+};
+
+const selectStyle: React.CSSProperties = {
+  ...fieldStyle,
+  appearance: "none",
+  cursor: "pointer",
+  background: "#fff", // ★ 드롭다운 배경도 input과 통일
+  fontSize: 13,
+  height: 63,
+};
+
+/* ----------------------------------------------------------- */
+/*                          버튼 영역                          */
+/* ----------------------------------------------------------- */
+
+const baseBtn: React.CSSProperties = {
+  height: 44,
+  padding: "0 20px",
+  borderRadius: 12,
   fontWeight: 600,
   cursor: "pointer",
-  fontSize: 14,
+  fontSize: 15,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const editBtn: React.CSSProperties = {
+  ...baseBtn,
+  background: color.orange,
+  border: `1.5px solid ${color.orange}`,
+  color: "#fff",
+  marginTop: "10px",
 };
 
 const cancelBtn: React.CSSProperties = {
-  padding: "8px 16px",
-  borderRadius: 10,
-  border: `1.5px solid ${color.orange}`,
+  ...baseBtn,
   background: "#fff",
+  border: `1.5px solid ${color.orange}`,
   color: color.orange,
-  fontWeight: 600,
-  cursor: "pointer",
-  fontSize: 14,
+  marginTop: "10px",
 };
 
-const saveBtn: React.CSSProperties = { ...editBtn };
+const saveBtn: React.CSSProperties = {
+  ...baseBtn,
+  background: color.orange,
+  border: `1.5px solid ${color.orange}`,
+  color: "#fff",
+  marginTop: "10px",
+};
+
+/* ----------------------------------------------------------- */
+/*                          기타 스타일                        */
+/* ----------------------------------------------------------- */
 
 const badge: React.CSSProperties = {
   fontSize: 12,
@@ -1146,6 +1378,11 @@ const modalSave: React.CSSProperties = {
   fontWeight: 600,
   fontSize: 14,
   border: "none",
+};
+
+const labelText: React.CSSProperties = {
+  fontSize: 12,
+  color: "#6b7280",
 };
 
 export default ProfilePage;
