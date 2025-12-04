@@ -529,23 +529,23 @@ WHERE NOT EXISTS (SELECT major_name FROM Majors WHERE major_name = '열린전공
 """)
 
 # 3. 사용자 (테스트용 가짜)
-# cursor.execute("""
-# INSERT INTO Users (id, password, user_name, phone, email, major_id, year, gpa, income_level, receive_notifications)
-# SELECT * FROM (
-#     SELECT 
-#         'test1' AS id,
-#         %s AS password,
-#         '김김김' AS user_name,
-#         '01011111111' AS phone,
-#         '111@test.com' AS email,
-#         10 AS major_id,
-#         '4' AS year,
-#         '3.00' AS gpa,
-#         '4분위' AS income_level,
-#         1 AS receive_notifications
-# ) AS tmp
-# WHERE NOT EXISTS (SELECT id FROM Users WHERE id='test1');
-# """, (make_password('password1'),))
+cursor.execute("""
+INSERT INTO Users (id, password, user_name, phone, email, major_id, year, gpa, income_level, receive_notifications)
+SELECT * FROM (
+    SELECT 
+        'test1' AS id,
+        %s AS password,
+        '김김김' AS user_name,
+        '01011111111' AS phone,
+        '111@test.com' AS email,
+        10 AS major_id,
+        '4' AS year,
+        '3.00' AS gpa,
+        '4분위' AS income_level,
+        1 AS receive_notifications
+) AS tmp
+WHERE NOT EXISTS (SELECT id FROM Users WHERE id='test1');
+""", (make_password('password1'),))
 # cursor.execute("""
 # INSERT INTO Users (id, password, user_name, phone, email, major_id, year, gpa, income_level, receive_notifications)
 # SELECT * FROM (
