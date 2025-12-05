@@ -15,7 +15,7 @@ class CalendarSerializer(serializers.ModelSerializer):
         source="scholarship.end_date",
         read_only=True
     )
-    doc_id = serializers.IntegerField(
+    doc_id = serializers.CharField(
         source="scholarship.doc_id",
         read_only=True
     )
@@ -43,7 +43,7 @@ class NotificationSerializer(serializers.ModelSerializer):
         source="bookmark.scholarship.end_date",
         read_only=True
     )
-    doc_id = serializers.IntegerField(
+    doc_id = serializers.CharField(
         source="bookmark.scholarship.doc_id",
         read_only=True
     )
