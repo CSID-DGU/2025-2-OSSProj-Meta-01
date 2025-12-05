@@ -286,7 +286,7 @@ class BookmarkSerializer(serializers.ModelSerializer):
     scholarship_name = serializers.CharField(source='scholarship.scholarship_name', read_only=True)
     start_date = serializers.DateField(source='scholarship.start_date', read_only=True)
     end_date = serializers.DateField(source='scholarship.end_date', read_only=True)
-    doc_id = serializers.IntegerField(source='scholarship.doc_id', read_only=True)
+    doc_id = serializers.CharField(source='scholarship.doc_id', read_only=True)
 
     class Meta:
         model = Bookmark
