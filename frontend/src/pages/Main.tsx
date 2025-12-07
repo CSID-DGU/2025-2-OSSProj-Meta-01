@@ -8,6 +8,8 @@ import notification from "../images/notification.png";
 import banner1_1_1 from "../images/banner1_1_1.png";
 import banner2_2 from "../images/banner2_2.png";
 
+import { useBadge } from "../contexts/BadgeContext";
+
 type Notice = {
   id: number;
   title: string;
@@ -36,6 +38,7 @@ type Scholarship = {
 
 const Main: React.FC = () => {
   const navigate = useNavigate();
+  const { count } = useBadge();
 
   // 학사공지 상태
   const [topNotices, setTopNotices] = useState<Notice[]>([]);
@@ -103,10 +106,8 @@ const Main: React.FC = () => {
           category: s.keywords?.[0]?.keyword ?? "장학",
         }));
 
-        // 날짜 오름차순 (마감 임박 순)
         converted.sort((a, b) => (a.deadline > b.deadline ? 1 : -1));
 
-        // 상위 3개만 표시
         setSchPrev(converted.slice(0, 3));
       } catch (e: any) {
         setSchErr(e?.message ?? "장학금 불러오기 실패");
@@ -148,12 +149,41 @@ const Main: React.FC = () => {
         <h2 style={{ margin: 0 }}>
           <img src={logo} alt="로고" style={{ width: "150px" }} />
         </h2>
-        <span
+
+        {/* 알림 아이콘 + 뱃지 추가 */}
+        <div
           onClick={() => navigate("/notifications")}
-          style={{ cursor: "pointer" }}
+          style={{
+            cursor: "pointer",
+            position: "relative",
+            width: "30px",
+            height: "30px",
+          }}
         >
           <img src={notification} alt="알림" style={{ width: "28px" }} />
-        </span>
+
+          {count > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                top: "-5px",
+                right: "-5px",
+                backgroundColor: "red",
+                color: "white",
+                borderRadius: "50%",
+                width: "18px",
+                height: "18px",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                fontSize: "11px",
+                fontWeight: "bold",
+              }}
+            >
+              {count}
+            </div>
+          )}
+        </div>
       </header>
 
       {/* 배너 */}
@@ -172,7 +202,6 @@ const Main: React.FC = () => {
         <div style={recommendHeaderStyle}>추천 장학금</div>
 
         <div style={{ padding: "1rem", color: "#333" }}>
-          {/* 추천 장학금이 없을 때만 안내 문구 표시 */}
           {recommendations.length === 0 && (
             <p style={recommendDescStyle}>
               조건에 맞는 장학금을 자동으로 추천합니다.
@@ -324,7 +353,7 @@ const Main: React.FC = () => {
   );
 };
 
-// 스타일 정의 (기존 유지)
+// 스타일
 const bannerSectionStyle: React.CSSProperties = {
   marginBottom: "1rem",
   borderRadius: "12px",
