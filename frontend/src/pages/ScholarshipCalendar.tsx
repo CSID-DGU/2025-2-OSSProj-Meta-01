@@ -4,9 +4,19 @@ import BottomNav from "../components/BottomNav";
 import logo from "../images/logo.png";
 import arrowIcon from "../images/Arrow.png";
 import { useBookmark } from "../contexts/BookmarkContext";
+import { useBadge } from "../contexts/BadgeContext";
 
 type CalendarItem = {
   bookmark_id: number;
+  scholarship_id: number;
+  scholarship_name: string;
+  end_date: string;
+  doc_id?: string;
+};
+
+type NotificationItem = {
+  notification_id: number;
+  notification_date: number;
   scholarship_id: number;
   scholarship_name: string;
   end_date: string;
@@ -42,24 +52,21 @@ function buildMonthGrid(base: Date) {
 export default function ScholarshipCalendar() {
   const navigate = useNavigate();
   const { toggleBookmark } = useBookmark();
+  const { setCount } = useBadge();
 
   const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([]);
   const [month, setMonth] = useState(() => new Date());
-  const [selectedAlertDays, setSelectedAlertDays] = useState<
-    Record<number, number>
-  >({});
   const [showDropdownFor, setShowDropdownFor] = useState<number | null>(null);
-
-  // 날짜 클릭 시 모달로 띄울 목록
   const [selectedDayItems, setSelectedDayItems] = useState<
     CalendarItem[] | null
   >(null);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("alertDays");
-    if (saved) setSelectedAlertDays(JSON.parse(saved));
-  }, []);
+  // 알림 정보를 bookmark_id 별로 저장
+  const [notificationsMap, setNotificationsMap] = useState<
+    Record<number, NotificationItem[]>
+  >({});
 
+  // 캘린더 데이터 호출
   useEffect(() => {
     const fetchCalendar = async () => {
       try {
@@ -86,6 +93,35 @@ export default function ScholarshipCalendar() {
     fetchCalendar();
   }, []);
 
+  // 각 bookmark_id 별로 알림 목록 불러오기
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+
+    calendarItems.forEach(async (item) => {
+      try {
+        const res = await fetch(
+          `http://127.0.0.1:8000/notification/bookmarks/${item.bookmark_id}/notifications/`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!res.ok) return;
+
+        const list = await res.json();
+        setNotificationsMap((prev) => ({
+          ...prev,
+          [item.bookmark_id]: list,
+        }));
+      } catch (err) {
+        console.log("알림 불러오기 실패", err);
+      }
+    });
+  }, [calendarItems]);
+
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarItem[]>();
     calendarItems.forEach((item) => {
@@ -97,9 +133,11 @@ export default function ScholarshipCalendar() {
   }, [calendarItems]);
 
   const grid = useMemo(() => buildMonthGrid(month), [month]);
+
   const monthLabel = `${month.getFullYear()}년 ${String(
     month.getMonth() + 1
   ).padStart(2, "0")}월`;
+
   const thisMonth = month.getMonth();
 
   const sortedItems = useMemo(() => {
@@ -108,41 +146,77 @@ export default function ScholarshipCalendar() {
     );
   }, [calendarItems]);
 
-  const calcAlertDate = (deadline: string, daysBefore: number) => {
-    const d = new Date(deadline);
-    d.setDate(d.getDate() - daysBefore);
-    return fmt(d);
-  };
-
-  const handleAlertSelect = (
-    id: number,
+  // 알림 추가
+  const handleAlertSelect = async (
+    bookmarkId: number,
     daysBefore: number,
     deadline: string
   ) => {
-    const alertDate = calcAlertDate(deadline, daysBefore);
-    const newData = { ...selectedAlertDays, [id]: daysBefore };
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(
+        `http://127.0.0.1:8000/notification/bookmarks/${bookmarkId}/notifications/add/`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ notification_date: daysBefore }),
+        }
+      );
 
-    setSelectedAlertDays(newData);
-    localStorage.setItem("alertDays", JSON.stringify(newData));
+      const data = await res.json();
 
-    alert(
-      `알림일이 ${
-        daysBefore === 0 ? "마감일 당일" : `${daysBefore}일 전`
-      } (${alertDate})로 설정되었습니다.`
-    );
+      if (data.notifications) {
+        setNotificationsMap((prev) => ({
+          ...prev,
+          [bookmarkId]: data.notifications,
+        }));
 
-    setShowDropdownFor(null);
+        setCount((prev) => prev + 1);
+      }
+
+      alert(`알림 D-${daysBefore}이 설정되었습니다.`);
+      setShowDropdownFor(null);
+    } catch (err) {
+      console.log("알림 추가 실패", err);
+    }
   };
 
-  const handleCancelAlert = (id: number) => {
-    setSelectedAlertDays((prev) => {
-      const updated = { ...prev };
-      delete updated[id];
-      localStorage.setItem("alertDays", JSON.stringify(updated));
-      return updated;
-    });
+  // 알림 삭제
+  const handleCancelAlert = async (
+    bookmarkId: number,
+    notificationId: number
+  ) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(
+        `http://127.0.0.1:8000/notification/notifications/${notificationId}/`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-    alert("알림 설정이 취소되었습니다.");
+      const data = await res.json();
+
+      if (data.notifications) {
+        setNotificationsMap((prev) => ({
+          ...prev,
+          [bookmarkId]: data.notifications,
+        }));
+
+        setCount((prev) => Math.max(prev - 1, 0));
+      }
+
+      alert("알림이 삭제되었습니다.");
+    } catch (err) {
+      console.log("알림 삭제 실패", err);
+    }
   };
 
   return (
@@ -158,7 +232,7 @@ export default function ScholarshipCalendar() {
           <img src={logo} alt="DMETA 로고" style={logoStyle} />
         </header>
 
-        {/* 캘린더 카드 */}
+        {/* 캘린더 */}
         <div style={calendarCard}>
           <div style={calHeader}>
             <button
@@ -190,7 +264,6 @@ export default function ScholarshipCalendar() {
             ))}
           </div>
 
-          {/* 날짜 Grid */}
           <div style={gridWrap}>
             {grid.map((d, i) => {
               const inMonth = d.getMonth() === thisMonth;
@@ -213,7 +286,6 @@ export default function ScholarshipCalendar() {
                     {d.getDate()}
                   </div>
 
-                  {/* 점 마크: 주황색 통일 */}
                   <div
                     style={{
                       display: "flex",
@@ -263,7 +335,8 @@ export default function ScholarshipCalendar() {
               </div>
             ) : (
               sortedItems.map((it) => {
-                const selectedDays = selectedAlertDays[it.scholarship_id];
+                const notis = notificationsMap[it.bookmark_id] || [];
+
                 const deadline = it.end_date;
                 const deadlineDate = new Date(deadline);
                 const diffDays = Math.floor(
@@ -271,16 +344,6 @@ export default function ScholarshipCalendar() {
                     (1000 * 60 * 60 * 24)
                 );
                 const isExpired = diffDays < 0;
-
-                const selectedText =
-                  selectedDays !== undefined
-                    ? selectedDays === 0
-                      ? `D-Day (${calcAlertDate(deadline, selectedDays)})`
-                      : `D-${selectedDays} (${calcAlertDate(
-                          deadline,
-                          selectedDays
-                        )})`
-                    : null;
 
                 const dayOptions = Array.from(
                   { length: Math.min(diffDays, 10) },
@@ -347,9 +410,9 @@ export default function ScholarshipCalendar() {
                         onClick={() =>
                           !isExpired &&
                           setShowDropdownFor(
-                            showDropdownFor === it.scholarship_id
+                            showDropdownFor === it.bookmark_id
                               ? null
-                              : it.scholarship_id
+                              : it.bookmark_id
                           )
                         }
                       >
@@ -357,12 +420,12 @@ export default function ScholarshipCalendar() {
                       </button>
                     </div>
 
-                    {showDropdownFor === it.scholarship_id && !isExpired && (
+                    {showDropdownFor === it.bookmark_id && !isExpired && (
                       <div style={{ marginTop: 10 }}>
                         <button
                           style={pillBtn}
                           onClick={() =>
-                            handleAlertSelect(it.scholarship_id, 0, deadline)
+                            handleAlertSelect(it.bookmark_id, 0, deadline)
                           }
                         >
                           D-Day
@@ -373,7 +436,7 @@ export default function ScholarshipCalendar() {
                             key={n}
                             style={{ ...pillBtn, marginRight: 6 }}
                             onClick={() =>
-                              handleAlertSelect(it.scholarship_id, n, deadline)
+                              handleAlertSelect(it.bookmark_id, n, deadline)
                             }
                           >
                             D-{n}
@@ -382,30 +445,39 @@ export default function ScholarshipCalendar() {
                       </div>
                     )}
 
-                    {selectedText && (
-                      <div
-                        style={{
-                          marginTop: 6,
-                          fontSize: 13,
-                          opacity: 0.85,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        설정된 알림일: {selectedText}
-                        <button
-                          style={{
-                            ...pillBtn,
-                            borderColor: "#374151",
-                            color: "#374151",
-                            padding: "3px 8px",
-                            fontSize: 12,
-                          }}
-                          onClick={() => handleCancelAlert(it.scholarship_id)}
-                        >
-                          취소
-                        </button>
+                    {notis.length > 0 && (
+                      <div style={{ marginTop: 6 }}>
+                        {notis.map((n) => (
+                          <div
+                            key={n.notification_id}
+                            style={{
+                              fontSize: 13,
+                              opacity: 0.85,
+                              display: "flex",
+                              justifyContent: "space-between",
+                              marginBottom: 4,
+                            }}
+                          >
+                            <span>설정된 알림일: D-{n.notification_date}</span>
+                            <button
+                              style={{
+                                ...pillBtn,
+                                borderColor: "#374151",
+                                color: "#374151",
+                                padding: "2px 6px",
+                                fontSize: 12,
+                              }}
+                              onClick={() =>
+                                handleCancelAlert(
+                                  it.bookmark_id,
+                                  n.notification_id
+                                )
+                              }
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -416,7 +488,6 @@ export default function ScholarshipCalendar() {
         </section>
       </div>
 
-      {/* 날짜별 장학금 모달 */}
       {selectedDayItems && (
         <div style={modalOverlayStyle}>
           <div style={modalStyle}>
@@ -516,9 +587,7 @@ const dowRow: React.CSSProperties = {
   opacity: 0.7,
 };
 
-const dowCell: React.CSSProperties = {
-  textAlign: "center",
-};
+const dowCell: React.CSSProperties = { textAlign: "center" };
 
 const gridWrap: React.CSSProperties = {
   display: "grid",
