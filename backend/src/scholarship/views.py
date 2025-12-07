@@ -6,9 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from mypage.models import Scholarship, Bookmark, UserKeyword
 from .models import ScholarshipKeyword, Recommendation
 from .serializers import ScholarshipSerializer
-from django.conf import settings
-from pymongo import MongoClient
-from bson.json_util import dumps, loads
+from mongo.connection import ScholarshipDocumentFetcher
+import json
 
 class ScholarshipListView(generics.ListAPIView):
     serializer_class = ScholarshipSerializer
@@ -62,17 +61,14 @@ class ScholarshipDetailView(APIView):
             return Response({"error": "해당 장학금에 상세 정보가 없습니다."},
                             status=status.HTTP_404_NOT_FOUND)
 
-        mongo_client = MongoClient(settings.MONGODB_URI)
-        mongo_db = mongo_client[settings.MONGODB_NAME]
-        collection = mongo_db[settings.MONGODB_COLLECTION]
+        with ScholarshipDocumentFetcher() as fetcher:
+            result_json = fetcher.get_document(scholarship.doc_id)
 
-        doc = collection.find_one({"doc_id": scholarship.doc_id})
-
-        if not doc:
+        if result_json == "{}":
             return Response({"error": "MongoDB에서 해당 장학금 상세 정보를 찾을 수 없습니다."},
                             status=status.HTTP_404_NOT_FOUND)
 
-        detail_data = loads(dumps(doc))
+        doc = json.loads(result_json)
 
         is_bookmarked = Bookmark.objects.filter(
             user=request.user, scholarship=scholarship
@@ -86,7 +82,7 @@ class ScholarshipDetailView(APIView):
             "url": scholarship.url,
             "image_url": scholarship.image_url,
             "is_bookmarked": is_bookmarked,
-            "detail": detail_data,
+            "detail": doc,
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
