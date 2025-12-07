@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import homeIcon from "../images/free-icon-home.png";
 import calendarIcon from "../images/free-icon-weekly-calendar-outline-event-interface-symbol.png";
@@ -28,42 +28,11 @@ const iconContainer: React.CSSProperties = {
 
 export default function BottomNav() {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
 
-  const handleLogout = async () => {
-    const access = localStorage.getItem("accessToken");
-    const refresh = localStorage.getItem("refreshToken");
-
-    if (!access || !refresh) {
-      alert("로그인 정보가 없습니다.");
-      navigate("/login");
-      return;
-    }
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/auth/logout/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${access}`,
-        },
-        body: JSON.stringify({
-          refresh: refresh,
-        }),
-      });
-
-      if (response.ok) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        alert("로그아웃 완료!");
-        navigate("/login", { replace: true });
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || "로그아웃 실패");
-      }
-    } catch (error) {
-      alert("서버 연결에 문제가 발생했습니다.");
-    }
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    navigate("/login", { replace: true });
   };
 
   return (

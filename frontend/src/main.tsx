@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { BookmarkProvider } from "./contexts/BookmarkContext"; // ✅ 정확한 경로
+import { BookmarkProvider } from "./contexts/BookmarkContext";
 import App from "./App";
 import Login from "./pages/Login";
 import "./index.css";
@@ -16,6 +16,7 @@ import NoticeBoard from "./pages/NoticeBoard";
 import NotificationCenter from "./pages/NotificationCenter";
 import ScholarshipCalendar from "./pages/ScholarshipCalendar";
 import Profile from "./pages/Profile";
+import RecommendedScholarshipDetail from "./pages/RecommendedScholarshipDetail";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -27,6 +28,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/signup" element={<Signup />} />
           <Route path="/signup-step2" element={<SignupStep2 />} />
           <Route path="/main" element={<Main />} />
+          <Route
+            path="/recommended/:id"
+            element={<RecommendedScholarshipDetail />}
+          />
 
           <Route path="/scholarship" element={<ScholarshipList />} />
           <Route path="/scholarship/:id" element={<ScholarshipDetail />} />

@@ -5,19 +5,12 @@ import logo from "../images/logo.png";
 import arrowIcon from "../images/Arrow.png";
 import { useBookmark } from "../contexts/BookmarkContext";
 
-type Item = {
-  id: number;
-  title: string;
-  deadline: string;
-  category: "교내" | "국가" | "외부";
-  provider?: string;
-  url?: string;
-};
-
-const CAT_COLOR: Record<Item["category"], string> = {
-  교내: "#3b82f6",
-  국가: "#10b981",
-  외부: "#a78bfa",
+type CalendarItem = {
+  bookmark_id: number;
+  scholarship_id: number;
+  scholarship_name: string;
+  end_date: string;
+  doc_id?: string;
 };
 
 const fmt = (d: Date) => {
@@ -36,6 +29,7 @@ function buildMonthGrid(base: Date) {
   const first = new Date(base.getFullYear(), base.getMonth(), 1);
   const start = new Date(first);
   start.setDate(first.getDate() - first.getDay());
+
   const days: Date[] = [];
   for (let i = 0; i < 42; i++) {
     const d = new Date(start);
@@ -47,58 +41,72 @@ function buildMonthGrid(base: Date) {
 
 export default function ScholarshipCalendar() {
   const navigate = useNavigate();
-  const { bookmarks, toggleBookmark } = useBookmark();
-  const [all, setAll] = useState<Item[]>([]);
+  const { toggleBookmark } = useBookmark();
+
+  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([]);
   const [month, setMonth] = useState(() => new Date());
   const [selectedAlertDays, setSelectedAlertDays] = useState<
     Record<number, number>
   >({});
   const [showDropdownFor, setShowDropdownFor] = useState<number | null>(null);
 
+  // 날짜 클릭 시 모달로 띄울 목록
+  const [selectedDayItems, setSelectedDayItems] = useState<
+    CalendarItem[] | null
+  >(null);
+
   useEffect(() => {
-    const savedAlerts = localStorage.getItem("alertDays");
-    if (savedAlerts) {
-      setSelectedAlertDays(JSON.parse(savedAlerts));
-    }
+    const saved = localStorage.getItem("alertDays");
+    if (saved) setSelectedAlertDays(JSON.parse(saved));
   }, []);
 
   useEffect(() => {
-    (async () => {
+    const fetchCalendar = async () => {
       try {
-        const res = await fetch("/api/scholarships.json", {
-          cache: "no-store",
-        });
-        const list: Item[] = await res.json();
+        const token = localStorage.getItem("accessToken");
+        const res = await fetch(
+          "http://127.0.0.1:8000/notification/calendar/",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-        list.forEach((it) => {
-          const [y, m, d] = it.deadline.split("-").map(Number);
-          it.deadline = fmt(new Date(y, m - 1, d));
-        });
+        if (!res.ok) throw new Error("캘린더 API 실패");
 
-        list.sort((a, b) => a.deadline.localeCompare(b.deadline));
-        setAll(list);
+        const list = await res.json();
+        setCalendarItems(list);
       } catch (e) {
-        console.error("장학금 로드 실패:", e);
+        console.error("캘린더 불러오기 실패:", e);
       }
-    })();
+    };
+
+    fetchCalendar();
   }, []);
-
-  const bookmarkedItems = useMemo(
-    () => all.filter((i) => bookmarks.includes(i.id)),
-    [all, bookmarks]
-  );
-
-  const grid = useMemo(() => buildMonthGrid(month), [month]);
 
   const eventsByDay = useMemo(() => {
-    const map = new Map<string, Item[]>();
-    bookmarkedItems.forEach((i) => {
-      const key = i.deadline;
+    const map = new Map<string, CalendarItem[]>();
+    calendarItems.forEach((item) => {
+      const key = item.end_date;
       if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(i);
+      map.get(key)!.push(item);
     });
     return map;
-  }, [bookmarkedItems]);
+  }, [calendarItems]);
+
+  const grid = useMemo(() => buildMonthGrid(month), [month]);
+  const monthLabel = `${month.getFullYear()}년 ${String(
+    month.getMonth() + 1
+  ).padStart(2, "0")}월`;
+  const thisMonth = month.getMonth();
+
+  const sortedItems = useMemo(() => {
+    return [...calendarItems].sort(
+      (a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime()
+    );
+  }, [calendarItems]);
 
   const calcAlertDate = (deadline: string, daysBefore: number) => {
     const d = new Date(deadline);
@@ -113,13 +121,16 @@ export default function ScholarshipCalendar() {
   ) => {
     const alertDate = calcAlertDate(deadline, daysBefore);
     const newData = { ...selectedAlertDays, [id]: daysBefore };
+
     setSelectedAlertDays(newData);
     localStorage.setItem("alertDays", JSON.stringify(newData));
+
     alert(
       `알림일이 ${
         daysBefore === 0 ? "마감일 당일" : `${daysBefore}일 전`
       } (${alertDate})로 설정되었습니다.`
     );
+
     setShowDropdownFor(null);
   };
 
@@ -130,13 +141,9 @@ export default function ScholarshipCalendar() {
       localStorage.setItem("alertDays", JSON.stringify(updated));
       return updated;
     });
+
     alert("알림 설정이 취소되었습니다.");
   };
-
-  const monthLabel = `${month.getFullYear()}년 ${String(
-    month.getMonth() + 1
-  ).padStart(2, "0")}월`;
-  const thisMonth = month.getMonth();
 
   return (
     <>
@@ -151,6 +158,7 @@ export default function ScholarshipCalendar() {
           <img src={logo} alt="DMETA 로고" style={logoStyle} />
         </header>
 
+        {/* 캘린더 카드 */}
         <div style={calendarCard}>
           <div style={calHeader}>
             <button
@@ -161,7 +169,9 @@ export default function ScholarshipCalendar() {
             >
               ‹
             </button>
+
             <div>{monthLabel}</div>
+
             <button
               style={navBtn}
               onClick={() =>
@@ -180,44 +190,51 @@ export default function ScholarshipCalendar() {
             ))}
           </div>
 
+          {/* 날짜 Grid */}
           <div style={gridWrap}>
             {grid.map((d, i) => {
               const inMonth = d.getMonth() === thisMonth;
               const key = fmt(d);
               const items = eventsByDay.get(key) || [];
               const isToday = sameDay(d, new Date());
+
               return (
                 <div
                   key={i}
+                  onClick={() => items.length > 0 && setSelectedDayItems(items)}
                   style={{
                     ...cell,
                     opacity: inMonth ? 1 : 0.35,
                     border: isToday ? "2px solid #2563eb" : "1px solid #eee",
+                    cursor: items.length > 0 ? "pointer" : "default",
                   }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 700 }}>
                     {d.getDate()}
                   </div>
+
+                  {/* 점 마크: 주황색 통일 */}
                   <div
                     style={{
                       display: "flex",
-                      gap: 4,
+                      gap: 3,
                       flexWrap: "wrap",
                       marginTop: 6,
                     }}
                   >
-                    {items.slice(0, 3).map((it, idx) => (
+                    {items.slice(0, 3).map((it) => (
                       <span
-                        key={idx}
-                        title={it.title}
+                        key={it.scholarship_id}
                         style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: 3,
-                          background: CAT_COLOR[it.category],
+                          width: 7,
+                          height: 7,
+                          borderRadius: 4,
+                          background: "#F97316",
+                          display: "inline-block",
                         }}
                       />
                     ))}
+
                     {items.length > 3 && (
                       <span style={{ fontSize: 10, opacity: 0.6 }}>
                         +{items.length - 3}
@@ -230,6 +247,7 @@ export default function ScholarshipCalendar() {
           </div>
         </div>
 
+        {/* 리스트 */}
         <section
           style={{
             background: "white",
@@ -239,38 +257,38 @@ export default function ScholarshipCalendar() {
           }}
         >
           <div style={{ padding: "1rem" }}>
-            {bookmarkedItems.length === 0 ? (
+            {sortedItems.length === 0 ? (
               <div style={{ textAlign: "center", color: "#6b7280" }}>
                 북마크된 장학금이 없습니다.
               </div>
             ) : (
-              bookmarkedItems.map((it) => {
-                const selectedDays = selectedAlertDays[it.id];
+              sortedItems.map((it) => {
+                const selectedDays = selectedAlertDays[it.scholarship_id];
+                const deadline = it.end_date;
+                const deadlineDate = new Date(deadline);
+                const diffDays = Math.floor(
+                  (deadlineDate.getTime() - new Date().getTime()) /
+                    (1000 * 60 * 60 * 24)
+                );
+                const isExpired = diffDays < 0;
+
                 const selectedText =
                   selectedDays !== undefined
                     ? selectedDays === 0
-                      ? `D-Day (${calcAlertDate(it.deadline, selectedDays)})`
+                      ? `D-Day (${calcAlertDate(deadline, selectedDays)})`
                       : `D-${selectedDays} (${calcAlertDate(
-                          it.deadline,
+                          deadline,
                           selectedDays
                         )})`
                     : null;
 
-                const today = new Date();
-                const deadlineDate = new Date(it.deadline);
-                const diffDays = Math.floor(
-                  (deadlineDate.getTime() - today.getTime()) /
-                    (1000 * 60 * 60 * 24)
-                );
-
-                const isExpired = diffDays < 0;
                 const dayOptions = Array.from(
-                  { length: Math.min(diffDays, 10) }, // 최대 10일까지만
+                  { length: Math.min(diffDays, 10) },
                   (_, i) => i + 1
                 );
 
                 return (
-                  <div key={it.id} style={itemCardStyle}>
+                  <div key={it.bookmark_id} style={itemCardStyle}>
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 10 }}
                     >
@@ -279,30 +297,42 @@ export default function ScholarshipCalendar() {
                           width: 8,
                           height: 8,
                           borderRadius: 4,
-                          background: CAT_COLOR[it.category],
+                          background: "#F97316",
                         }}
                       />
-                      <strong style={{ fontSize: 15 }}>{it.title}</strong>
+                      <strong style={{ fontSize: 15 }}>
+                        {it.scholarship_name}
+                      </strong>
                     </div>
 
                     <div style={metaStyle}>
-                      {it.provider ?? "기관"} · {it.category} · 마감{" "}
-                      <b>{it.deadline}</b>
+                      마감 <b>{deadline}</b>
                     </div>
 
                     <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                      {it.url && (
-                        <button
-                          style={pillBtn}
-                          onClick={() => window.open(it.url!, "_blank")}
-                        >
-                          공고 보기
-                        </button>
-                      )}
+                      <button
+                        style={pillBtn}
+                        onClick={() =>
+                          window.open(
+                            `https://www.google.com/search?q=${it.scholarship_name}`,
+                            "_blank"
+                          )
+                        }
+                      >
+                        공고 보기
+                      </button>
 
                       <button
                         style={pillBtn}
-                        onClick={() => toggleBookmark(it.id)}
+                        onClick={() => {
+                          toggleBookmark(it.scholarship_id);
+                          setCalendarItems((prev) =>
+                            prev.filter(
+                              (item) =>
+                                item.scholarship_id !== it.scholarship_id
+                            )
+                          );
+                        }}
                       >
                         북마크 해제
                       </button>
@@ -317,7 +347,9 @@ export default function ScholarshipCalendar() {
                         onClick={() =>
                           !isExpired &&
                           setShowDropdownFor(
-                            showDropdownFor === it.id ? null : it.id
+                            showDropdownFor === it.scholarship_id
+                              ? null
+                              : it.scholarship_id
                           )
                         }
                       >
@@ -325,12 +357,12 @@ export default function ScholarshipCalendar() {
                       </button>
                     </div>
 
-                    {showDropdownFor === it.id && !isExpired && (
+                    {showDropdownFor === it.scholarship_id && !isExpired && (
                       <div style={{ marginTop: 10 }}>
                         <button
                           style={pillBtn}
                           onClick={() =>
-                            handleAlertSelect(it.id, 0, it.deadline)
+                            handleAlertSelect(it.scholarship_id, 0, deadline)
                           }
                         >
                           D-Day
@@ -341,7 +373,7 @@ export default function ScholarshipCalendar() {
                             key={n}
                             style={{ ...pillBtn, marginRight: 6 }}
                             onClick={() =>
-                              handleAlertSelect(it.id, n, it.deadline)
+                              handleAlertSelect(it.scholarship_id, n, deadline)
                             }
                           >
                             D-{n}
@@ -355,7 +387,6 @@ export default function ScholarshipCalendar() {
                         style={{
                           marginTop: 6,
                           fontSize: 13,
-                          color: "#374151",
                           opacity: 0.85,
                           display: "flex",
                           alignItems: "center",
@@ -371,7 +402,7 @@ export default function ScholarshipCalendar() {
                             padding: "3px 8px",
                             fontSize: 12,
                           }}
-                          onClick={() => handleCancelAlert(it.id)}
+                          onClick={() => handleCancelAlert(it.scholarship_id)}
                         >
                           취소
                         </button>
@@ -385,12 +416,35 @@ export default function ScholarshipCalendar() {
         </section>
       </div>
 
+      {/* 날짜별 장학금 모달 */}
+      {selectedDayItems && (
+        <div style={modalOverlayStyle}>
+          <div style={modalStyle}>
+            <h3 style={{ marginBottom: 10 }}>해당 날짜 마감 장학금</h3>
+
+            {selectedDayItems.map((it) => (
+              <div key={it.scholarship_id} style={{ marginBottom: 10 }}>
+                <b>{it.scholarship_name}</b>
+                <div style={{ fontSize: 12, opacity: 0.7 }}>
+                  마감일: {it.end_date}
+                </div>
+              </div>
+            ))}
+
+            <button style={pillBtn} onClick={() => setSelectedDayItems(null)}>
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+
       <BottomNav />
     </>
   );
 }
 
-/* --- 스타일 --- */
+/* 스타일 */
+
 const containerStyle: React.CSSProperties = {
   maxWidth: "500px",
   margin: "0 auto",
@@ -462,7 +516,9 @@ const dowRow: React.CSSProperties = {
   opacity: 0.7,
 };
 
-const dowCell: React.CSSProperties = { textAlign: "center" };
+const dowCell: React.CSSProperties = {
+  textAlign: "center",
+};
 
 const gridWrap: React.CSSProperties = {
   display: "grid",
@@ -500,4 +556,26 @@ const pillBtn: React.CSSProperties = {
   cursor: "pointer",
   color: "#111827",
   fontSize: 13,
+};
+
+const modalOverlayStyle: React.CSSProperties = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100%",
+  background: "rgba(0,0,0,0.4)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 999,
+};
+
+const modalStyle: React.CSSProperties = {
+  background: "#fff",
+  padding: "20px",
+  borderRadius: "12px",
+  width: "80%",
+  maxWidth: "350px",
+  boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
 };
