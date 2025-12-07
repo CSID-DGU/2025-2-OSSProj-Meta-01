@@ -262,7 +262,7 @@ const Main: React.FC = () => {
                       flexWrap: "wrap",
                     }}
                   >
-                    {s.keywords.slice(0, 2).map((k) => (
+                    {s.keywords.map((k) => (
                       <span
                         key={k.keyword_id}
                         style={{
