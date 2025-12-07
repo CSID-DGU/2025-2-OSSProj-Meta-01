@@ -6,9 +6,7 @@ import logo from "../images/logo.png";
 import notification from "../images/notification.png";
 
 import banner1_1_1 from "../images/banner1_1_1.png";
-// 배너 이미지 1500 x 2070
-import banner2_2 from "../images/banner2_2.png"; // 추가 배너 있다면
-//import banner3 from "../images/banner3.png"; // 추가 배너 있다면
+import banner2_2 from "../images/banner2_2.png";
 
 type Notice = {
   id: number;
@@ -25,17 +23,36 @@ type ScholarshipPreview = {
   category?: string;
 };
 
+type Scholarship = {
+  scholarship_id: number;
+  scholarship_name: string;
+  start_date: string;
+  end_date: string;
+  url: string;
+  image_url: string | null;
+  is_bookmarked: boolean;
+  keywords: { keyword_id: number; keyword: string }[];
+};
+
 const Main: React.FC = () => {
   const navigate = useNavigate();
 
+  // 학사공지 상태
   const [topNotices, setTopNotices] = useState<Notice[]>([]);
   const [noticeLoading, setNoticeLoading] = useState(true);
   const [noticeErr, setNoticeErr] = useState<string | null>(null);
 
+  // 장학금 공지사항 미리보기 상태
   const [schPrev, setSchPrev] = useState<ScholarshipPreview[]>([]);
   const [schLoad, setSchLoad] = useState(true);
   const [schErr, setSchErr] = useState<string | null>(null);
 
+  // 추천 장학금 상태
+  const [recommendations, setRecommendations] = useState<Scholarship[]>([]);
+  const [recLoad, setRecLoad] = useState(true);
+  const [recErr, setRecErr] = useState<string | null>(null);
+
+  // 배너
   const [currentBanner, setCurrentBanner] = useState(0);
   const banners = [banner1_1_1, banner2_2];
 
@@ -46,6 +63,7 @@ const Main: React.FC = () => {
     return () => clearInterval(interval);
   }, [banners.length]);
 
+  // 학사공지 불러오기
   useEffect(() => {
     (async () => {
       try {
@@ -61,13 +79,35 @@ const Main: React.FC = () => {
     })();
   }, []);
 
+  // 장학금 공지 미리보기 불러오기
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/scholarships.json");
-        const list: ScholarshipPreview[] = await res.json();
-        list.sort((a, b) => (a.deadline > b.deadline ? 1 : -1));
-        setSchPrev(list.slice(0, 3));
+        const token = localStorage.getItem("accessToken");
+
+        const res = await fetch("http://127.0.0.1:8000/scholarships/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) throw new Error("장학금 API 요청 실패");
+
+        const rawList = await res.json();
+
+        const converted: ScholarshipPreview[] = rawList.map((s: any) => ({
+          id: s.scholarship_id,
+          title: s.scholarship_name,
+          deadline: s.end_date,
+          category: s.keywords?.[0]?.keyword ?? "장학",
+        }));
+
+        // 날짜 오름차순 (마감 임박 순)
+        converted.sort((a, b) => (a.deadline > b.deadline ? 1 : -1));
+
+        // 상위 3개만 표시
+        setSchPrev(converted.slice(0, 3));
       } catch (e: any) {
         setSchErr(e?.message ?? "장학금 불러오기 실패");
       } finally {
@@ -76,28 +116,47 @@ const Main: React.FC = () => {
     })();
   }, []);
 
+  // 추천 장학금 API 불러오기
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+
+        const res = await fetch(
+          "http://127.0.0.1:8000/scholarships/recommendations/",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (!res.ok) throw new Error("추천 장학금 불러오기 실패");
+
+        const data: Scholarship[] = await res.json();
+        setRecommendations(data);
+      } catch (e: any) {
+        setRecErr(e?.message ?? "추천 장학금 불러오기 오류");
+      } finally {
+        setRecLoad(false);
+      }
+    })();
+  }, []);
+
   return (
     <div style={containerStyle}>
+      {/* 헤더 */}
       <header style={headerStyle}>
         <h2 style={{ margin: 0 }}>
-          <img
-            src={logo}
-            alt="로고"
-            style={{ width: "150px", height: "auto" }}
-          />
+          <img src={logo} alt="로고" style={{ width: "150px" }} />
         </h2>
         <span
-          style={{ color: "#4facfe", cursor: "pointer" }}
           onClick={() => navigate("/notifications")}
+          style={{ cursor: "pointer" }}
         >
-          <img
-            src={notification}
-            alt="알림"
-            style={{ width: "28px", height: "28px" }}
-          />
+          <img src={notification} alt="알림" style={{ width: "28px" }} />
         </span>
       </header>
 
+      {/* 배너 */}
       <section style={bannerSectionStyle}>
         <div style={bannerWrapperStyle}>
           <img
@@ -108,21 +167,101 @@ const Main: React.FC = () => {
         </div>
       </section>
 
+      {/* 추천 장학금 섹션 */}
       <section style={recommendCardStyle}>
         <div style={recommendHeaderStyle}>추천 장학금</div>
-        <p style={recommendDescStyle}>
-          조건에 맞는 장학금을 자동으로 추천합니다.
-        </p>
+
+        <div style={{ padding: "1rem", color: "#333" }}>
+          {/* 추천 장학금이 없을 때만 안내 문구 표시 */}
+          {recommendations.length === 0 && (
+            <p style={recommendDescStyle}>
+              조건에 맞는 장학금을 자동으로 추천합니다.
+            </p>
+          )}
+
+          {recLoad && <div style={{ textAlign: "center" }}>불러오는 중…</div>}
+          {recErr && (
+            <div style={{ textAlign: "center", color: "tomato" }}>
+              에러: {recErr}
+            </div>
+          )}
+
+          {!recLoad && !recErr && recommendations.length === 0 && (
+            <div
+              style={{ textAlign: "center", padding: "20px 0", color: "#777" }}
+            >
+              추천할 장학금이 아직 없습니다.
+            </div>
+          )}
+
+          {!recLoad && !recErr && recommendations.length > 0 && (
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                marginTop: 12,
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              {recommendations.slice(0, 3).map((s) => (
+                <li
+                  key={s.scholarship_id}
+                  onClick={() => navigate(`/recommended/${s.scholarship_id}`)}
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: "12px",
+                    backgroundColor: "#fafafa",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
+                    cursor: "pointer",
+                    transition: "0.15s",
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                    {s.scholarship_name}
+                  </div>
+
+                  <div style={{ fontSize: 12, opacity: 0.7 }}>
+                    마감 {s.end_date}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 6,
+                      display: "flex",
+                      gap: 6,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {s.keywords.slice(0, 2).map((k) => (
+                      <span
+                        key={k.keyword_id}
+                        style={{
+                          fontSize: 11,
+                          padding: "2px 8px",
+                          backgroundColor: "#ffe7c8",
+                          color: "#b56500",
+                          borderRadius: "8px",
+                        }}
+                      >
+                        {k.keyword}
+                      </span>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
 
+      {/* 장학금 공지사항 */}
       <section style={scholarshipCardStyle}>
         <div style={scholarshipHeaderStyle}>장학금 공지사항</div>
 
         <div style={scholarshipContentStyle}>
-          {schLoad && <div style={{ marginTop: 8 }}>불러오는 중…</div>}
-          {schErr && (
-            <div style={{ marginTop: 8, color: "tomato" }}>에러: {schErr}</div>
-          )}
+          {schLoad && <div>불러오는 중…</div>}
+          {schErr && <div style={{ color: "tomato" }}>에러: {schErr}</div>}
 
           {!schLoad && !schErr && (
             <ul style={listStyle}>
@@ -132,15 +271,12 @@ const Main: React.FC = () => {
                   style={listItemStyle}
                   onClick={() => navigate(`/scholarship/${s.id}`)}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 2 }}>
-                    {s.title}
-                  </div>
+                  <div style={{ fontWeight: 600 }}>{s.title}</div>
                   <div style={{ fontSize: 12, opacity: 0.7 }}>
                     {s.category ?? "장학"} · 마감 {s.deadline}
                   </div>
                 </li>
               ))}
-              {!schPrev.length && <li>표시할 장학금이 없습니다.</li>}
             </ul>
           )}
 
@@ -150,15 +286,14 @@ const Main: React.FC = () => {
         </div>
       </section>
 
+      {/* 학사공지 */}
       <section style={noticeCardStyle}>
         <div style={noticeHeaderStyle}>학사공지</div>
 
         <div style={noticeContentStyle}>
-          {noticeLoading && <div style={{ marginTop: 8 }}>불러오는 중…</div>}
+          {noticeLoading && <div>불러오는 중…</div>}
           {noticeErr && (
-            <div style={{ marginTop: 8, color: "tomato" }}>
-              에러: {noticeErr}
-            </div>
+            <div style={{ color: "tomato" }}>에러: {noticeErr}</div>
           )}
 
           {!noticeLoading && !noticeErr && (
@@ -169,15 +304,12 @@ const Main: React.FC = () => {
                   style={listItemStyle}
                   onClick={() => navigate(`/notice/${n.id}`)}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: 2 }}>
-                    {n.title}
-                  </div>
+                  <div style={{ fontWeight: 600 }}>{n.title}</div>
                   <div style={{ fontSize: 12, opacity: 0.7 }}>
                     {n.category ?? "학사"} · {n.postedAt}
                   </div>
                 </li>
               ))}
-              {!topNotices.length && <li>표시할 공지가 없습니다.</li>}
             </ul>
           )}
 
@@ -192,6 +324,7 @@ const Main: React.FC = () => {
   );
 };
 
+// 스타일 정의 (기존 유지)
 const bannerSectionStyle: React.CSSProperties = {
   marginBottom: "1rem",
   borderRadius: "12px",
@@ -232,16 +365,6 @@ const headerStyle: React.CSSProperties = {
   marginBottom: "1rem",
   borderBottom: "1px solid #ddd",
   paddingBottom: "0.5rem",
-  color: "#000",
-};
-
-const cardStyle: React.CSSProperties = {
-  backgroundColor: "white",
-  color: "#333",
-  padding: "1rem",
-  marginBottom: "1rem",
-  borderRadius: "12px",
-  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
 };
 
 const buttonStyle: React.CSSProperties = {
@@ -277,7 +400,6 @@ const headerBaseStyle: React.CSSProperties = {
   padding: "0 14px",
   fontWeight: 600,
   fontSize: "16px",
-  lineHeight: "1",
   borderTopLeftRadius: "16px",
   borderTopRightRadius: "16px",
   borderBottom: "none",
@@ -295,12 +417,7 @@ const recommendHeaderStyle: React.CSSProperties = {
   ...headerBaseStyle,
   background: "linear-gradient(to right, #ffa938, #ffcfa5)",
   color: "white",
-  fontWeight: 600,
   padding: "10px 14px",
-  fontSize: "16px",
-  borderTopLeftRadius: "16px",
-  borderTopRightRadius: "16px",
-  borderBottom: "none",
 };
 
 const recommendDescStyle: React.CSSProperties = {
@@ -322,12 +439,7 @@ const scholarshipHeaderStyle: React.CSSProperties = {
   ...headerBaseStyle,
   background: "linear-gradient(to right, #ffa938, #ffcfa5)",
   color: "white",
-  fontWeight: 600,
   padding: "10px 14px",
-  fontSize: "16px",
-  borderTopLeftRadius: "16px",
-  borderTopRightRadius: "16px",
-  borderBottom: "none",
 };
 
 const scholarshipContentStyle: React.CSSProperties = {
@@ -347,12 +459,7 @@ const noticeHeaderStyle: React.CSSProperties = {
   ...headerBaseStyle,
   background: "linear-gradient(to right, #ffa938, #ffcfa5)",
   color: "white",
-  fontWeight: 600,
   padding: "10px 14px",
-  fontSize: "16px",
-  borderTopLeftRadius: "16px",
-  borderTopRightRadius: "16px",
-  borderBottom: "none",
 };
 
 const noticeContentStyle: React.CSSProperties = {

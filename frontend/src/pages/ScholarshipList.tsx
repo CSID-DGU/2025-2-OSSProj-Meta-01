@@ -7,13 +7,31 @@ import bookmarkFilledIcon from "../images/bookmark_filled.png";
 import arrowIcon from "../images/Arrow.png";
 import { useBookmark } from "../contexts/BookmarkContext";
 
+const ALL_KEYWORDS = [
+  "교내장학",
+  "교외장학",
+  "국가장학",
+  "봉사",
+  "성적우수",
+  "등록금지원",
+  "생활비지원",
+  "이공계",
+  "인문계",
+  "예체능",
+  "종교",
+  "저소득층",
+  "기업연계",
+  "자격증",
+];
+
 type Scholarship = {
   id: number;
   title: string;
-  provider: string;
+  category: string;
   deadline: string;
   amount?: string;
-  category?: string;
+  isBookmarked: boolean;
+  tags: string[];
 };
 
 type Keyword = {
@@ -25,6 +43,7 @@ const ScholarshipList: React.FC = () => {
   const [data, setData] = useState<Scholarship[]>([]);
   const [filtered, setFiltered] = useState<Scholarship[]>([]);
   const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [initialKeywords, setInitialKeywords] = useState<Keyword[]>([]);
   const [showKeywords, setShowKeywords] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -32,62 +51,100 @@ const ScholarshipList: React.FC = () => {
 
   const { bookmarks, toggleBookmark } = useBookmark();
 
-  // ✅ localStorage에서 프로필 키워드 불러오기 (기준값)
-  useEffect(() => {
-    const saved = localStorage.getItem("keywords");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const normalized = parsed.map((k: any) =>
-            typeof k === "string" ? { name: k, active: true } : k
-          );
-          setKeywords([...normalized]); // 복제본 사용
-        }
-      } catch {
-        setKeywords([]);
-      }
-    }
+  /* 서버에서 내 관심 키워드 불러오기 */
+  const loadUserKeywords = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
 
-    (async () => {
-      try {
-        const res = await fetch("/api/scholarships.json");
-        if (!res.ok) throw new Error("JSON 파일 불러오기 실패");
-        const list: Scholarship[] = await res.json();
-        list.sort((a, b) => (a.deadline > b.deadline ? 1 : -1));
-        setData(list);
-        setFiltered(list);
-      } catch (e: any) {
-        setErr(e?.message ?? "장학금 불러오기 실패");
-      } finally {
-        setLoading(false);
-      }
-    })();
+      const res = await fetch("http://127.0.0.1:8000/mypage/me/keywords/", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error("키워드 로드 실패");
+
+      const userKeywords = await res.json();
+
+      // ALL_KEYWORDS 기준으로 active 처리
+      const merged = ALL_KEYWORDS.map((k) => ({
+        name: k,
+        active: userKeywords.some((uk: any) => uk.keyword === k),
+      }));
+
+      setKeywords(merged);
+      setInitialKeywords(merged);
+    } catch (e) {
+      console.error("키워드 로드 오류:", e);
+      const fallback = ALL_KEYWORDS.map((k) => ({ name: k, active: false }));
+      setKeywords(fallback);
+      setInitialKeywords(fallback);
+    }
+  };
+
+  /* 장학금 리스트 API 호출 */
+  const loadScholarships = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+
+      const res = await fetch("http://127.0.0.1:8000/scholarships/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) throw new Error("장학금 API 요청 실패");
+
+      const list = await res.json();
+
+      const converted: Scholarship[] = list.map((s: any) => {
+        const mainCategory = s.keywords?.[0]?.keyword ?? "장학";
+
+        return {
+          id: s.scholarship_id,
+          title: s.scholarship_name,
+          category: mainCategory,
+          deadline: s.end_date,
+          amount: undefined,
+          isBookmarked: s.is_bookmarked,
+          tags: s.keywords ? s.keywords.map((k: any) => k.keyword) : [],
+        };
+      });
+
+      converted.sort((a, b) => (a.deadline > b.deadline ? 1 : -1));
+      setData(converted);
+      setFiltered(converted);
+    } catch (e: any) {
+      setErr(e?.message ?? "장학금 불러오기 실패");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* 페이지 첫 로드 → 키워드 + 장학금 데이터 모두 로드 */
+  useEffect(() => {
+    loadUserKeywords();
+    loadScholarships();
   }, []);
 
-  // ✅ 키워드 클릭 시 온/오프 (localStorage에는 반영 안 됨)
+  /* 키워드 필터링 */
   const handleKeywordClick = (kw: string) => {
     setKeywords((prev) => {
       const updated = prev.map((k) =>
         k.name === kw ? { ...k, active: !k.active } : k
       );
 
-      // 활성 키워드만 필터링
-      const actives = updated.filter((k) => k.active).map((k) => k.name);
-      if (actives.length === 0) {
+      const activeNames = updated.filter((k) => k.active).map((k) => k.name);
+
+      if (activeNames.length === 0) {
         setFiltered(data);
       } else {
         setFiltered(
           data.filter((s) =>
-            actives.some((sel) => {
-              if (sel === "교내장학") return s.category === "교내";
-              if (sel === "국가장학") return s.category === "국가";
-              if (sel === "교외장학") return s.category === "외부";
-              return (
-                s.title.includes(sel) ||
-                s.provider.includes(sel) ||
-                (s.amount && s.amount.includes(sel))
-              );
+            activeNames.some((sel) => {
+              if (["교내장학", "교외장학", "국가장학"].includes(sel)) {
+                return s.category === sel;
+              }
+              return s.tags.includes(sel);
             })
           )
         );
@@ -97,12 +154,11 @@ const ScholarshipList: React.FC = () => {
     });
   };
 
-  // ✅ 새로고침 시 localStorage 기준으로 복구됨 (useEffect 재실행)
+  /* UI 렌더링  */
 
   return (
     <>
       <div style={container}>
-        {/* ===== Header ===== */}
         <header style={header}>
           <img
             src={arrowIcon}
@@ -115,38 +171,36 @@ const ScholarshipList: React.FC = () => {
 
         <h2 style={title}>전체 장학금 리스트</h2>
 
-        {/* ===== 키워드 토글 버튼 ===== */}
+        {/* 키워드 토글 */}
         <div style={keywordToggleWrap}>
           <button
-            onClick={() => setShowKeywords(!showKeywords)}
+            onClick={() => {
+              const willOpen = !showKeywords;
+              setShowKeywords(willOpen);
+            }}
             style={keywordToggleBtn}
           >
             {showKeywords ? "관심키워드 숨기기 ▲" : "관심키워드 보기 ▼"}
           </button>
 
-          {/* 접힘 상태: 활성 키워드만 표시 */}
           {!showKeywords && keywords.length > 0 && (
             <div style={selectedKeywordsText}>
               {keywords
-                .filter((kw) => kw.active) // ✅ 활성만 표시
-                .map((kw, i) => (
+                .filter((k) => k.active)
+                .map((k, i) => (
                   <span
                     key={i}
-                    style={{
-                      color: "#374151",
-                      marginRight: 6,
-                      cursor: "pointer",
-                    }}
-                    onClick={() => handleKeywordClick(kw.name)}
+                    style={{ marginRight: 6, cursor: "pointer" }}
+                    onClick={() => handleKeywordClick(k.name)}
                   >
-                    #{kw.name}
+                    #{k.name}
                   </span>
                 ))}
             </div>
           )}
         </div>
 
-        {/* ===== 펼친 상태 ===== */}
+        {/* 펼친 키워드 */}
         {showKeywords && (
           <div style={keywordWrap}>
             {keywords.map((kw, i) => (
@@ -166,23 +220,21 @@ const ScholarshipList: React.FC = () => {
           </div>
         )}
 
-        {/* ===== 장학금 카드 ===== */}
+        {/* 장학금 리스트 */}
         <section>
           {loading && <div>불러오는 중…</div>}
           {err && <div style={{ color: "tomato" }}>에러: {err}</div>}
+
           {!loading && !err && (
             <ul style={ulStyle}>
               {filtered.map((s) => {
                 const isBookmarked = bookmarks.includes(s.id);
+
                 return (
                   <li key={s.id} style={itemCard}>
                     <div style={topRow}>
                       <div
-                        style={{
-                          fontWeight: 700,
-                          flex: 1,
-                          cursor: "pointer",
-                        }}
+                        style={{ fontWeight: 700, flex: 1, cursor: "pointer" }}
                         onClick={() => navigate(`/scholarship/${s.id}`)}
                       >
                         {s.title}
@@ -200,8 +252,19 @@ const ScholarshipList: React.FC = () => {
                     </div>
 
                     <div style={metaText}>
-                      {s.provider} · {s.category ?? "장학"} · 마감{" "}
-                      <b>{s.deadline}</b>
+                      {s.tags?.length > 0 && (
+                        <div style={{ marginBottom: 4 }}>
+                          {s.tags.map((tag, idx) => (
+                            <span
+                              key={idx}
+                              style={{ marginRight: 8, color: "#374151" }}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {s.category} · 마감 <b>{s.deadline}</b>
                     </div>
 
                     {s.amount && (
@@ -222,7 +285,7 @@ const ScholarshipList: React.FC = () => {
   );
 };
 
-/* ---------------- Styles ---------------- */
+/* 스타일 */
 const container: React.CSSProperties = {
   maxWidth: 500,
   margin: "0 auto",
@@ -253,11 +316,7 @@ const arrow: React.CSSProperties = {
   opacity: 0.8,
 };
 
-const logoStyle: React.CSSProperties = {
-  width: 120,
-  height: "auto",
-  objectFit: "contain",
-};
+const logoStyle: React.CSSProperties = { width: 120 };
 
 const title: React.CSSProperties = {
   fontSize: 18,
@@ -268,7 +327,6 @@ const title: React.CSSProperties = {
 const keywordToggleWrap: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  flexWrap: "wrap",
   gap: 8,
   marginBottom: 10,
 };
@@ -281,11 +339,8 @@ const keywordToggleBtn: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 600,
   cursor: "pointer",
-  color: "#374151",
-  transition: "0.2s",
 };
 
-// ✅ 프로필처럼 줄바꿈 유지 + 자연스러운 줄 간격
 const selectedKeywordsText: React.CSSProperties = {
   fontSize: 14,
   lineHeight: 2,
@@ -293,18 +348,14 @@ const selectedKeywordsText: React.CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
   gap: 6,
-  justifyContent: "flex-start",
   color: "#374151",
 };
 
-// ✅ 프로필과 동일한 키워드 줄 정렬
 const keywordWrap: React.CSSProperties = {
   display: "flex",
   flexWrap: "wrap",
   gap: 6,
   marginBottom: 16,
-  justifyContent: "flex-start",
-  alignItems: "flex-start",
 };
 
 const keywordTag: React.CSSProperties = {
@@ -312,9 +363,7 @@ const keywordTag: React.CSSProperties = {
   padding: "6px 12px",
   fontSize: 13,
   fontWeight: 600,
-  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
   cursor: "pointer",
-  transition: "all 0.2s ease",
 };
 
 const ulStyle: React.CSSProperties = {
@@ -330,12 +379,10 @@ const itemCard: React.CSSProperties = {
   borderRadius: 14,
   padding: "14px",
   background: "#fff",
-  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
 };
 
 const topRow: React.CSSProperties = {
   display: "flex",
-  alignItems: "center",
   justifyContent: "space-between",
 };
 
@@ -347,7 +394,6 @@ const metaText: React.CSSProperties = {
 
 const bookmarkIconStyle: React.CSSProperties = {
   width: 20,
-  height: 20,
   cursor: "pointer",
 };
 

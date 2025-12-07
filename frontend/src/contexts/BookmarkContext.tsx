@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 type BookmarkContextType = {
   bookmarks: number[];
-  toggleBookmark: (id: number) => void;
+  toggleBookmark: (id: number) => Promise<void>;
 };
 
 const BookmarkContext = createContext<BookmarkContextType | null>(null);
@@ -18,16 +18,43 @@ export const BookmarkProvider: React.FC<{ children: React.ReactNode }> = ({
     if (saved) setBookmarks(JSON.parse(saved));
   }, []);
 
-  const toggleBookmark = (id: number) => {
-    setBookmarks((prev) => {
-      const updated = prev.includes(id)
-        ? prev.filter((b) => b !== id)
-        : [...prev, id];
-      localStorage.setItem("scholarshipBookmarks", JSON.stringify(updated));
-      // ✅ 다른 페이지(캘린더/프로필) 갱신 이벤트 발생
-      window.dispatchEvent(new Event("bookmark-updated"));
-      return updated;
-    });
+  const toggleBookmark = async (id: number) => {
+    const token = localStorage.getItem("accessToken");
+
+    try {
+      // ⭐ 서버로 북마크 토글 요청 보내기
+      const res = await fetch(
+        `http://127.0.0.1:8000/scholarships/${id}/bookmark/`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      // ⭐ 서버 메시지 표시
+      if (data?.message) {
+        alert(data.message);
+      }
+
+      // ⭐ 로컬 상태 업데이트
+      setBookmarks((prev) => {
+        const updated = prev.includes(id)
+          ? prev.filter((b) => b !== id)
+          : [...prev, id];
+
+        localStorage.setItem("scholarshipBookmarks", JSON.stringify(updated));
+
+        window.dispatchEvent(new Event("bookmark-updated"));
+        return updated;
+      });
+    } catch (e) {
+      alert("북마크 처리 중 오류 발생");
+    }
   };
 
   return (
