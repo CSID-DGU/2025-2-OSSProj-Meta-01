@@ -2,6 +2,8 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from datetime import datetime, time, timedelta
+from django.utils import timezone
 
 from mypage.exceptions import CustomExceptionHandlerMixin
 from mypage.models import Bookmark
@@ -125,3 +127,34 @@ class MyNotificationDeleteView(CustomExceptionHandlerMixin, APIView):
             },
             status=status.HTTP_200_OK
         )
+
+class MyNotificationCountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        now = timezone.localtime()
+
+        notifications = (
+            Notification.objects
+            .select_related("bookmark__scholarship")
+            .filter(bookmark__user=request.user)
+        )
+
+        count = 0
+
+        for n in notifications:
+            scholarship = n.bookmark.scholarship
+
+            send_date = scholarship.end_date - timedelta(days=n.notification_date)
+
+            send_datetime = timezone.make_aware(
+                datetime.combine(send_date, time(hour=9, minute=0)),
+                timezone.get_current_timezone()
+            )
+
+            if now < send_datetime:
+                count += 1
+
+        return Response({"count": count}, status=200)
+    

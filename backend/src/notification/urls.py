@@ -4,6 +4,7 @@ from .views import (
     MyNotificationListView,
     MyNotificationCreateView,
     MyNotificationDeleteView,
+    MyNotificationCountView,
 )
 
 app_name = "notification"
@@ -14,4 +15,5 @@ urlpatterns = [
     path("bookmarks/<int:bookmark_id>/notifications/", MyNotificationListView.as_view(), name="my_notifications"),
     path("bookmarks/<int:bookmark_id>/notifications/add/", MyNotificationCreateView.as_view(), name="add_my_notification"),
     path("notifications/<int:notification_id>/", MyNotificationDeleteView.as_view(), name="delete_my_notification"),
+    path("count/", MyNotificationCountView.as_view(), name="count_my_notification"),
 ]
