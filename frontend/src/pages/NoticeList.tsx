@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
-import logo from "../images/logo.png";
+import logo from "../images/metalogo.png";
 
 type Notice = {
   id: number;

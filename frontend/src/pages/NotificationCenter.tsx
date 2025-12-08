@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
-import logo from "../images/logo.png";
+import logo from "../images/metalogo.png";
 import arrowIcon from "../images/Arrow.png";
 import { useBadge } from "../contexts/BadgeContext";
 import { toast } from "react-hot-toast";

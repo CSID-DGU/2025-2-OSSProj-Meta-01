@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
-import logo from "../images/logo.png";
+import logo from "../images/metalogo.png";
 import bookmarkIcon from "../images/bookmark.png";
 import bookmarkFilledIcon from "../images/bookmark_filled.png";
 import arrowIcon from "../images/Arrow.png";

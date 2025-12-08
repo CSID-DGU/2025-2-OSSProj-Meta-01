@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { DEPARTMENT_MAP } from "../constants/departments";
 import BottomNav from "../components/BottomNav";
-import logo from "../images/logo.png";
+import logo from "../images/metalogo.png";
 import arrowIcon from "../images/Arrow.png";
 
 type Notice = {
