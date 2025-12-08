@@ -4,6 +4,7 @@ import BottomNav from "../components/BottomNav";
 import logo from "../images/logo.png";
 import arrowIcon from "../images/Arrow.png";
 import { apiRequest } from "../api/apiClient";
+import { useBookmark } from "../contexts/BookmarkContext";
 
 export const majorOptions = [
   { major_id: 1, major_name: "불교학과" },
@@ -85,6 +86,7 @@ const incomeOptions = [
   { label: "9분위", value: "9분위" },
   { label: "10분위", value: "10분위" },
 ];
+
 type Profile = {
   name: string;
   major: string | number;
@@ -92,15 +94,6 @@ type Profile = {
   gpa: string;
   incomeLevel: string;
   receiveNotifications: boolean;
-};
-
-type ScholarshipItem = {
-  id: number;
-  title: string;
-  provider: string;
-  deadline: string;
-  category: "교내" | "국가" | "외부";
-  url?: string;
 };
 
 type KeywordBase = {
@@ -149,10 +142,7 @@ type UserBookmark = {
   end_date: string;
 };
 
-/* ----------------------------------------------------------- */
-/*                       스타일 유틸                           */
-/* ----------------------------------------------------------- */
-
+/* 스타일 유틸 */
 const color = {
   orange: "#f97316",
   text: "#111827",
@@ -161,17 +151,15 @@ const color = {
   card: "#ffffff",
 };
 
-const catColor = (c: "교내" | "국가" | "외부") =>
-  c === "교내" ? "#3b82f6" : c === "국가" ? "#10b981" : "#a78bfa";
+const catColor = (c: string) => "#f97316";
 
-/* ----------------------------------------------------------- */
-/*                        페이지 시작                          */
-/* ----------------------------------------------------------- */
-
+/* 페이지 시작 */
 const ProfilePage: React.FC = () => {
   const nav = useNavigate();
 
-  /* ------------------- 기본 정보 ------------------- */
+  const { removeBookmarkById } = useBookmark();
+
+  /* 기본 정보 */
   const [form, setForm] = useState<Profile>({
     name: "",
     major: "",
@@ -183,21 +171,18 @@ const ProfilePage: React.FC = () => {
 
   const [editInfo, setEditInfo] = useState(false);
 
-  /* ------------------- 비밀번호 ------------------- */
+  /* 비밀번호 */
   const [pwForm, setPwForm] = useState({
     old_password: "",
     new_password1: "",
     new_password2: "",
   });
 
-  /* ------------------- 장학금 ------------------- */
-  const [schBase, setSchBase] = useState<ScholarshipItem[]>([]);
-
-  /* ------------------- 키워드 ------------------- */
+  /* 키워드 */
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [editingKeywords, setEditingKeywords] = useState(false);
 
-  /* ------------------- 자격증 ------------------- */
+  /* 자격증 */
   const [allCerts, setAllCerts] = useState<CertBase[]>([]);
   const [userCerts, setUserCerts] = useState<UserCertListItem[]>([]);
 
@@ -208,22 +193,19 @@ const ProfilePage: React.FC = () => {
   const [editingCertDetail, setEditingCertDetail] =
     useState<UserCertDetail | null>(null);
 
-  /* ------------------- 북마크 ------------------- */
+  /* 북마크 */
   const [userBookmarks, setUserBookmarks] = useState<UserBookmark[]>([]);
 
-  /* ----------------------------------------------------------- */
-  /*                         초기 로드                           */
-  /* ----------------------------------------------------------- */
+  /* 초기 로드 */
   useEffect(() => {
-    loadKeywords(); // 키워드 API 연동
-    loadScholarships();
+    loadKeywords();
     loadMyInfo();
     loadAllCerts();
     loadUserCerts();
     loadBookmarks();
   }, []);
 
-  /* ------------------- 키워드 로드 (API 연동) ------------------- */
+  /* 키워드 로드 (API 연동) */
   const loadKeywords = async () => {
     try {
       const [baseRes, userRes] = await Promise.all([
@@ -252,19 +234,12 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  /* ------------------- 장학금 로드 ------------------- */
-  const loadScholarships = async () => {
-    const res = await fetch("/api/scholarships.json");
-    setSchBase(await res.json());
-  };
-
-  /* ------------------- 마이페이지 정보 ------------------- */
+  /* 마이페이지 정보 */
   const loadMyInfo = async () => {
     const res = await apiRequest("http://127.0.0.1:8000/mypage/me/");
     if (!res.ok) return;
     const data = await res.json();
 
-    // 백엔드 응답 구조에 맞게 일부만 매핑 (이름/학과는 필요 시 추가 작업)
     setForm({
       name: data.user_name ?? "",
       major:
@@ -277,7 +252,7 @@ const ProfilePage: React.FC = () => {
     });
   };
 
-  /* ------------------- 자격증 전체 목록 ------------------- */
+  /* 자격증 전체 목록 */
   const loadAllCerts = async () => {
     const res = await apiRequest(
       "http://127.0.0.1:8000/mypage/certifications/"
@@ -286,7 +261,7 @@ const ProfilePage: React.FC = () => {
     setAllCerts(await res.json());
   };
 
-  /* ------------------- 사용자 자격증 목록 ------------------- */
+  /* 사용자 자격증 목록  */
   const loadUserCerts = async () => {
     const res = await apiRequest(
       "http://127.0.0.1:8000/mypage/me/certifications/"
@@ -295,7 +270,7 @@ const ProfilePage: React.FC = () => {
     setUserCerts(await res.json());
   };
 
-  /* ------------------- 자격증 상세 ------------------- */
+  /* 자격증 상세 */
   const loadCertDetail = async (id: number) => {
     const res = await apiRequest(
       `http://127.0.0.1:8000/mypage/me/certifications/${id}/`
@@ -304,32 +279,24 @@ const ProfilePage: React.FC = () => {
     setEditingCertDetail(await res.json());
   };
 
-  /* ------------------- 북마크 GET ------------------- */
+  /* 북마크 GET */
   const loadBookmarks = async () => {
     const res = await apiRequest("http://127.0.0.1:8000/mypage/me/bookmarks/");
     if (!res.ok) return;
     setUserBookmarks(await res.json());
   };
 
-  /* ------------------- 북마크 삭제 ------------------- */
-  const handleUnbookmark = async (bookmarkId: number) => {
-    const res = await apiRequest(
-      `http://127.0.0.1:8000/mypage/me/bookmarks/${bookmarkId}/`,
-      { method: "DELETE" }
-    );
+  /* 북마크 삭제 */
+  const handleUnbookmark = async (
+    bookmarkId: number,
+    scholarshipId: number
+  ) => {
+    await removeBookmarkById(bookmarkId, scholarshipId);
 
-    const data = await res.json();
-
-    if (res.ok) {
-      setUserBookmarks(data.bookmarks);
-    } else {
-      alert("북마크 해제 실패");
-    }
+    loadBookmarks();
   };
 
-  /* ----------------------------------------------------------- */
-  /*                       개인정보 저장                         */
-  /* ----------------------------------------------------------- */
+  /* 개인정보 저장 */
   const handleSaveInfo = async () => {
     const res = await apiRequest("http://127.0.0.1:8000/mypage/me/", {
       method: "PATCH",
@@ -348,14 +315,12 @@ const ProfilePage: React.FC = () => {
       loadMyInfo();
     } else {
       const errorData = await res.json();
-      console.log("❌ PATCH ERROR:", errorData); // ⭐ 에러확인
+      console.log("PATCH ERROR:", errorData);
       alert("저장 실패: " + JSON.stringify(errorData));
     }
   };
 
-  /* ----------------------------------------------------------- */
-  /*                     비밀번호 변경 API                        */
-  /* ----------------------------------------------------------- */
+  /* 비밀번호 변경 API */
   const handleChangePassword = async () => {
     const res = await apiRequest("http://127.0.0.1:8000/mypage/me/", {
       method: "PATCH",
@@ -368,7 +333,6 @@ const ProfilePage: React.FC = () => {
       alert("비밀번호가 변경되었습니다.");
       setPwForm({ old_password: "", new_password1: "", new_password2: "" });
     } else {
-      // 백엔드 에러 포맷에 맞춰 메시지 표시
       const detail = data.details;
       const firstKey = detail && Object.keys(detail)[0];
       const msgArray = firstKey ? detail[firstKey] : null;
@@ -381,10 +345,7 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  /* ----------------------------------------------------------- */
-  /*                       키워드 로직                          */
-  /* ----------------------------------------------------------- */
-
+  /* 키워드 로직 */
   const handleToggleKeyword = (keywordId: number) => {
     if (!editingKeywords) return;
     setKeywords((prev) =>
@@ -395,7 +356,6 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleCancelKeywords = () => {
-    // 서버 상태로 되돌리기
     loadKeywords();
     setEditingKeywords(false);
   };
@@ -405,7 +365,6 @@ const ProfilePage: React.FC = () => {
       const toAdd = keywords.filter((k) => k.active && !k.user_keyword_id);
       const toRemove = keywords.filter((k) => !k.active && k.user_keyword_id);
 
-      // 추가
       for (const k of toAdd) {
         await apiRequest("http://127.0.0.1:8000/mypage/me/keywords/add/", {
           method: "POST",
@@ -413,7 +372,6 @@ const ProfilePage: React.FC = () => {
         });
       }
 
-      // 삭제
       for (const k of toRemove) {
         await apiRequest(
           `http://127.0.0.1:8000/mypage/me/keywords/${k.user_keyword_id}/`,
@@ -430,10 +388,7 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  /* ----------------------------------------------------------- */
-  /*                        자격증 추가                          */
-  /* ----------------------------------------------------------- */
-
+  /* 자격증 추가*/
   const handleAddCert = async (payload: {
     certification_id: number;
     score: string;
@@ -453,18 +408,13 @@ const ProfilePage: React.FC = () => {
     if (res.ok) {
       alert("자격증이 추가되었습니다.");
       setAddModalOpen(false);
-      // 백엔드에서 certifications 목록을 바로 내려주므로 사용해도 되고,
-      // 그냥 다시 조회하는 방식으로 유지
       loadUserCerts();
     } else {
       alert(data.error || "추가 실패");
     }
   };
 
-  /* ----------------------------------------------------------- */
-  /*                   자격증 수정 + 삭제                         */
-  /* ----------------------------------------------------------- */
-
+  /* 자격증 수정 + 삭제 */
   const handleSaveEditCert = async () => {
     if (!editingCertId || !editingCertDetail) return;
 
@@ -516,33 +466,22 @@ const ProfilePage: React.FC = () => {
     setEditModalOpen(true);
   };
 
-  /* ----------------------------------------------------------- */
-  /*                        북마크 JOIN                          */
-  /* ----------------------------------------------------------- */
-
+  /* 북마크 목록 */
   const bookmarkRows = useMemo(() => {
     return userBookmarks
-      .map((b) => {
-        const base = schBase.find((s) => s.id === b.scholarship_id);
-        if (!base) return null;
-        return {
-          bookmark_id: b.bookmark_id,
-          id: base.id,
-          title: base.title,
-          provider: base.provider,
-          deadline: base.deadline,
-          category: base.category,
-          url: base.url,
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a!.deadline.localeCompare(b!.deadline));
-  }, [userBookmarks, schBase]);
+      .map((b) => ({
+        bookmark_id: b.bookmark_id,
+        id: b.scholarship_id,
+        title: b.scholarship_name,
+        deadline: b.end_date,
+        provider: "",
+        category: "장학금",
+        url: "",
+      }))
+      .sort((a, b) => a.deadline.localeCompare(b.deadline));
+  }, [userBookmarks]);
 
-  /* ----------------------------------------------------------- */
-  /*                          렌더링                              */
-  /* ----------------------------------------------------------- */
-
+  /* 렌더링 */
   return (
     <>
       <div style={wrap}>
@@ -552,7 +491,7 @@ const ProfilePage: React.FC = () => {
           <img src={logo} style={logoStyle} />
         </header>
 
-        {/* ================== 내 정보 ================== */}
+        {/* 내 정보 */}
         <section style={card}>
           <h3 style={sectionTitle}>내 정보</h3>
 
@@ -679,7 +618,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </section>
 
-        {/* ============= 관심 키워드 ============= */}
+        {/* 관심 키워드 */}
         <section style={card}>
           <h3 style={sectionTitle}>내 관심 키워드</h3>
           <div
@@ -727,7 +666,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </section>
 
-        {/* ============= 자격증 목록 ============= */}
+        {/* 자격증 목록 */}
         <section style={card}>
           <h3 style={sectionTitle}>내 자격증/어학성적</h3>
 
@@ -757,7 +696,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </section>
 
-        {/* ============= 북마크 목록 ============= */}
+        {/* 북마크 목록 */}
         <section style={card}>
           <div style={sectionTop}>
             <h3 style={sectionTitle}>북마크 관리</h3>
@@ -801,7 +740,7 @@ const ProfilePage: React.FC = () => {
 
                     <button
                       style={miniBtn}
-                      onClick={() => handleUnbookmark(s!.bookmark_id)}
+                      onClick={() => handleUnbookmark(s!.bookmark_id, s!.id)}
                     >
                       북마크 해제
                     </button>
@@ -812,11 +751,10 @@ const ProfilePage: React.FC = () => {
           </div>
         </section>
 
-        {/* ============= 계정 ============= */}
+        {/* 계정 */}
         <section style={card}>
           <h3 style={sectionTitle}>계정</h3>
 
-          {/* 비밀번호 변경 섹션 (아래로 이동) */}
           <div
             style={{
               display: "grid",
@@ -885,10 +823,7 @@ const ProfilePage: React.FC = () => {
   );
 };
 
-/* ----------------------------------------------------------- */
-/*               재사용 EditableInput 컴포넌트                 */
-/* ----------------------------------------------------------- */
-
+/* 재사용 EditableInput 컴포넌트 */
 const EditableInput = ({
   label,
   value,
@@ -940,10 +875,7 @@ const ReadOnlyRow = ({
   </label>
 );
 
-/* ----------------------------------------------------------- */
-/*                 자격증 추가 모달 컴포넌트                  */
-/* ----------------------------------------------------------- */
-
+/* 자격증 추가 모달 컴포넌트 */
 const AddCertModal: React.FC<{
   allCerts: CertBase[];
   onClose: () => void;
@@ -1049,10 +981,7 @@ const AddCertModal: React.FC<{
   );
 };
 
-/* ----------------------------------------------------------- */
-/*                 자격증 수정 모달 컴포넌트                  */
-/* ----------------------------------------------------------- */
-
+/* 자격증 수정 모달 컴포넌트 */
 const EditCertModal: React.FC<{
   detail: UserCertDetail;
   setDetail: (d: UserCertDetail) => void;
@@ -1122,10 +1051,7 @@ const EditCertModal: React.FC<{
   );
 };
 
-/* ----------------------------------------------------------- */
-/*                           스타일                            */
-/* ----------------------------------------------------------- */
-
+/* 스타일 */
 const wrap: React.CSSProperties = {
   maxWidth: 480,
   margin: "0 auto",
@@ -1189,10 +1115,6 @@ const formWrap: React.CSSProperties = {
   gap: 14,
 };
 
-/* ----------------------------------------------------------- */
-/*                input + select 공통 필드 스타일              */
-/* ----------------------------------------------------------- */
-
 const fieldStyle: React.CSSProperties = {
   height: 52,
   borderRadius: 12,
@@ -1203,22 +1125,19 @@ const fieldStyle: React.CSSProperties = {
   outline: "none",
   display: "flex",
   alignItems: "center",
-  lineHeight: "52px", // ★ input 높이 정확히 통일
+  lineHeight: "52px",
 };
 
 const selectStyle: React.CSSProperties = {
   ...fieldStyle,
   appearance: "none",
   cursor: "pointer",
-  background: "#fff", // ★ 드롭다운 배경도 input과 통일
+  background: "#fff",
   fontSize: 13,
   height: 63,
 };
 
-/* ----------------------------------------------------------- */
-/*                          버튼 영역                          */
-/* ----------------------------------------------------------- */
-
+/* 버튼 영역 */
 const baseBtn: React.CSSProperties = {
   height: 44,
   padding: "0 20px",
@@ -1255,10 +1174,7 @@ const saveBtn: React.CSSProperties = {
   marginTop: "10px",
 };
 
-/* ----------------------------------------------------------- */
-/*                          기타 스타일                        */
-/* ----------------------------------------------------------- */
-
+/* 기타 스타일 */
 const badge: React.CSSProperties = {
   fontSize: 12,
   border: `1px solid ${color.border}`,

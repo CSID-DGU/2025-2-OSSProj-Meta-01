@@ -155,7 +155,6 @@ const ScholarshipList: React.FC = () => {
   };
 
   /* UI 렌더링  */
-
   return (
     <>
       <div style={container}>
