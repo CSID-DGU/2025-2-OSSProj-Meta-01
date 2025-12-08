@@ -1,9 +1,12 @@
-// src/contexts/BookmarkContext.tsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 type BookmarkContextType = {
   bookmarks: number[];
   toggleBookmark: (id: number) => Promise<void>;
+  removeBookmarkById: (
+    bookmarkId: number,
+    scholarshipId: number
+  ) => Promise<void>;
 };
 
 const BookmarkContext = createContext<BookmarkContextType | null>(null);
@@ -13,18 +16,53 @@ export const BookmarkProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [bookmarks, setBookmarks] = useState<number[]>([]);
 
+  /* 초기 북마크 로드 */
   useEffect(() => {
-    const saved = localStorage.getItem("scholarshipBookmarks");
-    if (saved) setBookmarks(JSON.parse(saved));
+    const loadInitialBookmarks = async () => {
+      const token = localStorage.getItem("accessToken");
+
+      if (!token) {
+        const saved = localStorage.getItem("scholarshipBookmarks");
+        if (saved) setBookmarks(JSON.parse(saved));
+        return;
+      }
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/mypage/me/bookmarks/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          const saved = localStorage.getItem("scholarshipBookmarks");
+          if (saved) setBookmarks(JSON.parse(saved));
+          return;
+        }
+
+        const serverList = await res.json();
+        const ids = serverList.map((b: any) => b.scholarship_id);
+
+        setBookmarks(ids);
+        localStorage.setItem("scholarshipBookmarks", JSON.stringify(ids));
+      } catch (e) {
+        console.error("북마크 초기 로드 오류:", e);
+        const saved = localStorage.getItem("scholarshipBookmarks");
+        if (saved) setBookmarks(JSON.parse(saved));
+      }
+    };
+
+    loadInitialBookmarks();
   }, []);
 
-  const toggleBookmark = async (id: number) => {
+  /* 북마크 토글  */
+  const toggleBookmark = async (scholarshipId: number) => {
     const token = localStorage.getItem("accessToken");
 
     try {
-      // ⭐ 서버로 북마크 토글 요청 보내기
       const res = await fetch(
-        `http://127.0.0.1:8000/scholarships/${id}/bookmark/`,
+        `http://127.0.0.1:8000/scholarships/${scholarshipId}/bookmark/`,
         {
           method: "POST",
           headers: {
@@ -34,31 +72,73 @@ export const BookmarkProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
 
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {}
 
-      // ⭐ 서버 메시지 표시
-      if (data?.message) {
-        alert(data.message);
+      if ((data as any)?.message) {
+        alert((data as any).message);
       }
 
-      // ⭐ 로컬 상태 업데이트
       setBookmarks((prev) => {
-        const updated = prev.includes(id)
-          ? prev.filter((b) => b !== id)
-          : [...prev, id];
+        const updated = prev.includes(scholarshipId)
+          ? prev.filter((id) => id !== scholarshipId)
+          : [...prev, scholarshipId];
 
         localStorage.setItem("scholarshipBookmarks", JSON.stringify(updated));
-
         window.dispatchEvent(new Event("bookmark-updated"));
         return updated;
       });
     } catch (e) {
       alert("북마크 처리 중 오류 발생");
+      console.error(e);
+    }
+  };
+
+  /* 북마크 삭제  */
+  const removeBookmarkById = async (
+    bookmarkId: number,
+    scholarshipId: number
+  ) => {
+    const token = localStorage.getItem("accessToken");
+
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/mypage/me/bookmarks/${bookmarkId}/`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {}
+
+      alert((data as any)?.message || "북마크가 삭제되었습니다.");
+
+      // 상태 동기화
+      setBookmarks((prev) => {
+        const updated = prev.filter((id) => id !== scholarshipId);
+        localStorage.setItem("scholarshipBookmarks", JSON.stringify(updated));
+        window.dispatchEvent(new Event("bookmark-updated"));
+        return updated;
+      });
+    } catch (e) {
+      alert("북마크 삭제 중 오류 발생");
+      console.error(e);
     }
   };
 
   return (
-    <BookmarkContext.Provider value={{ bookmarks, toggleBookmark }}>
+    <BookmarkContext.Provider
+      value={{ bookmarks, toggleBookmark, removeBookmarkById }}
+    >
       {children}
     </BookmarkContext.Provider>
   );
