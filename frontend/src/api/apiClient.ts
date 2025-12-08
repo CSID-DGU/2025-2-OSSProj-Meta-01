@@ -1,6 +1,9 @@
 import { toast } from "react-hot-toast";
 
-export async function apiRequest(url: string, options: any = {}) {
+export async function apiRequest(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
   const access = localStorage.getItem("accessToken");
   const refresh = localStorage.getItem("refreshToken");
 
@@ -30,7 +33,10 @@ export async function apiRequest(url: string, options: any = {}) {
       localStorage.setItem("accessToken", data.access);
 
       // Authorization 헤더 갱신
-      options.headers.Authorization = `Bearer ${data.access}`;
+      options.headers = {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${data.access}`,
+      };
 
       // 요청 재시도
       response = await fetch(url, options);
@@ -47,7 +53,7 @@ export async function apiRequest(url: string, options: any = {}) {
 
       // 로그인 화면으로 이동
       window.location.href = "/login";
-      return;
+      return Promise.reject("Session expired");
     }
   }
 

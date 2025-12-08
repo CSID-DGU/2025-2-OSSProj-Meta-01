@@ -1,4 +1,3 @@
-// src/constants/departments.ts
 export const DEPARTMENT_MAP: Record<string, string[]> = {
   공과대학: [
     "산업시스템공학과",

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 
-import logo from "../images/logo.png";
+import logo from "../images/metalogo.png";
 import notification from "../images/notification.png";
 
 import banner1_1_1 from "../images/banner1_1_1.png";

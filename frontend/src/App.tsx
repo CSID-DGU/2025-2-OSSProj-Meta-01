@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "./images/logo.png";
+import logo from "./images/metalogo.png";
 
 const App: React.FC = () => {
   const navigate = useNavigate();
