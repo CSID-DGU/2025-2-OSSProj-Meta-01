@@ -9,6 +9,7 @@ import banner1_1_1 from "../images/banner1_1_1.png";
 import banner2_2 from "../images/banner2_2.png";
 
 import { useBadge } from "../contexts/BadgeContext";
+import { toast } from "react-hot-toast";
 
 type Notice = {
   id: number;
@@ -75,7 +76,9 @@ const Main: React.FC = () => {
         list.sort((a, b) => (a.postedAt < b.postedAt ? 1 : -1));
         setTopNotices(list.slice(0, 3));
       } catch (e: any) {
-        setNoticeErr(e?.message ?? "학사공지 불러오기 실패");
+        const msg = e?.message ?? "학사공지 불러오기 실패";
+        setNoticeErr(msg);
+        toast.error(msg);
       } finally {
         setNoticeLoading(false);
       }
@@ -88,6 +91,11 @@ const Main: React.FC = () => {
     (async () => {
       try {
         const token = localStorage.getItem("accessToken");
+        if (!token) {
+          toast.error("로그인이 필요합니다.");
+          navigate("/login");
+          return;
+        }
 
         const res = await fetch("http://127.0.0.1:8000/scholarships/", {
           headers: {
@@ -111,7 +119,9 @@ const Main: React.FC = () => {
 
         setSchPrev(converted.slice(0, 3));
       } catch (e: any) {
-        setSchErr(e?.message ?? "장학금 불러오기 실패");
+        const msg = e?.message ?? "장학금 불러오기 실패";
+        setSchErr(msg);
+        toast.error(msg);
       } finally {
         setSchLoad(false);
       }
@@ -123,6 +133,11 @@ const Main: React.FC = () => {
     (async () => {
       try {
         const token = localStorage.getItem("accessToken");
+        if (!token) {
+          toast.error("로그인이 필요합니다.");
+          navigate("/login");
+          return;
+        }
 
         const res = await fetch(
           "http://127.0.0.1:8000/scholarships/recommendations/",
@@ -136,7 +151,9 @@ const Main: React.FC = () => {
         const data: Scholarship[] = await res.json();
         setRecommendations(data);
       } catch (e: any) {
-        setRecErr(e?.message ?? "추천 장학금 불러오기 오류");
+        const msg = e?.message ?? "추천 장학금 불러오기 오류";
+        setRecErr(msg);
+        toast.error(msg);
       } finally {
         setRecLoad(false);
       }
@@ -210,11 +227,6 @@ const Main: React.FC = () => {
           )}
 
           {recLoad && <div style={{ textAlign: "center" }}>불러오는 중…</div>}
-          {recErr && (
-            <div style={{ textAlign: "center", color: "tomato" }}>
-              에러: {recErr}
-            </div>
-          )}
 
           {!recLoad && !recErr && recommendations.length === 0 && (
             <div
@@ -291,7 +303,6 @@ const Main: React.FC = () => {
 
         <div style={scholarshipContentStyle}>
           {schLoad && <div>불러오는 중…</div>}
-          {schErr && <div style={{ color: "tomato" }}>에러: {schErr}</div>}
 
           {!schLoad && !schErr && (
             <ul style={listStyle}>
@@ -322,9 +333,6 @@ const Main: React.FC = () => {
 
         <div style={noticeContentStyle}>
           {noticeLoading && <div>불러오는 중…</div>}
-          {noticeErr && (
-            <div style={{ color: "tomato" }}>에러: {noticeErr}</div>
-          )}
 
           {!noticeLoading && !noticeErr && (
             <ul style={listStyle}>

@@ -19,8 +19,22 @@ import ScholarshipCalendar from "./pages/ScholarshipCalendar";
 import Profile from "./pages/Profile";
 import RecommendedScholarshipDetail from "./pages/RecommendedScholarshipDetail";
 
+import { Toaster } from "react-hot-toast";
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+    {/* 전역 Toast 설정 */}
+    <Toaster
+      position="top-center"
+      reverseOrder={false}
+      toastOptions={{
+        duration: 2500,
+        style: {
+          fontSize: "14px",
+        },
+      }}
+    />
+
     <BadgeProvider>
       <BookmarkProvider>
         <BrowserRouter>
@@ -29,7 +43,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/signup-step2" element={<SignupStep2 />} />
+
             <Route path="/main" element={<Main />} />
+
             <Route
               path="/recommended/:id"
               element={<RecommendedScholarshipDetail />}
@@ -41,6 +57,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="/notices" element={<NoticeBoard />} />
             <Route path="/notices/list" element={<NoticeList />} />
             <Route path="/notice/:id" element={<NoticeDetail />} />
+
             <Route
               path="/notice"
               element={<Navigate to="/notices" replace />}

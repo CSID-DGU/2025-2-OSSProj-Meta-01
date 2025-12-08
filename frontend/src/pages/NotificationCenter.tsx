@@ -4,6 +4,7 @@ import BottomNav from "../components/BottomNav";
 import logo from "../images/logo.png";
 import arrowIcon from "../images/Arrow.png";
 import { useBadge } from "../contexts/BadgeContext";
+import { toast } from "react-hot-toast";
 
 type CalendarItem = {
   bookmark_id: number;
@@ -38,7 +39,6 @@ const NotificationCenter: React.FC = () => {
     try {
       const token = localStorage.getItem("accessToken");
 
-      // 캘린더에서 bookmark_id 목록 먼저 가져오기
       const calRes = await fetch(
         "http://127.0.0.1:8000/notification/calendar/",
         {
@@ -59,7 +59,6 @@ const NotificationCenter: React.FC = () => {
         return;
       }
 
-      // 각 bookmark_id에 대한 실제 알림 조회
       const all: NotificationItem[] = [];
 
       for (const id of bookmarkIds) {
@@ -85,7 +84,6 @@ const NotificationCenter: React.FC = () => {
         all.push(...enriched);
       }
 
-      // 최신 순으로 정렬
       all.sort(
         (a, b) =>
           new Date(b.end_date).getTime() - new Date(a.end_date).getTime()
@@ -94,6 +92,7 @@ const NotificationCenter: React.FC = () => {
       setNotifications(all);
     } catch (e) {
       console.error("알림 불러오기 실패:", e);
+      toast.error("알림 정보를 불러오지 못했습니다.");
     }
   };
 
@@ -118,8 +117,11 @@ const NotificationCenter: React.FC = () => {
       await res.json();
 
       setNotifications((prev) => prev.filter((n) => n.notification_id !== id));
+
+      toast.success("알림이 삭제되었습니다.");
     } catch (e) {
       console.error("알림 삭제 실패:", e);
+      toast.error("알림 삭제에 실패했습니다.");
     }
   };
 
@@ -143,13 +145,11 @@ const NotificationCenter: React.FC = () => {
 
         <h2 style={title}>알림 센터</h2>
 
-        {/* 알림 정책 설명 */}
         <p style={tip}>
           내가 추가한 알림(D-n)만 저장돼요. 기본 제공되는 D-1 알림은 자동
           발송되지만 기록되지 않아요.
         </p>
 
-        {/* 리스트 */}
         <section style={sectionCard}>
           <h3 style={sectionTitle}>설정된 알림</h3>
 
@@ -160,7 +160,7 @@ const NotificationCenter: React.FC = () => {
           {notifications.map((n) => (
             <div key={n.notification_id} style={card}>
               <div style={cardHeader}>
-                <div style={{ fontSize: 15, fontWeight: "600" }}>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>
                   {n.scholarship_name}
                 </div>
 
@@ -185,7 +185,6 @@ const NotificationCenter: React.FC = () => {
 };
 
 /* 스타일 */
-
 const container: React.CSSProperties = {
   maxWidth: "500px",
   margin: "0 auto",
