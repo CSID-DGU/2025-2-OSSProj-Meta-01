@@ -49,9 +49,12 @@ const Login: React.FC = () => {
         backgroundImage: "url('/background.jpeg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
+        padding: "16px", // 모바일 대응
+        boxSizing: "border-box",
         position: "relative",
       }}
     >
+      {/* 배경 흰색 오버레이 */}
       <div
         style={{
           position: "absolute",
@@ -64,6 +67,8 @@ const Login: React.FC = () => {
           pointerEvents: "none",
         }}
       />
+
+      {/* 로그인 카드 */}
       <div
         style={{
           zIndex: 2,
@@ -72,7 +77,9 @@ const Login: React.FC = () => {
           borderRadius: "16px",
           boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
           padding: "2rem",
-          width: "320px",
+          width: "100%", // 모바일에서 꽉 차게
+          maxWidth: "360px", // 너무 넓어지지 않도록
+          boxSizing: "border-box",
         }}
       >
         <img
@@ -83,13 +90,14 @@ const Login: React.FC = () => {
 
         <h2 style={{ marginBottom: "1.5rem", color: "#333" }}>로그인</h2>
 
+        {/* ID 입력 */}
         <input
           type="text"
           placeholder="ID"
           value={studentId}
           onChange={(e) => setStudentId(e.target.value)}
           style={{
-            width: "90%",
+            width: "100%",
             padding: "12px",
             marginBottom: "1rem",
             borderRadius: "8px",
@@ -97,16 +105,18 @@ const Login: React.FC = () => {
             backgroundColor: "#fff",
             outline: "none",
             color: "#333",
+            boxSizing: "border-box",
           }}
         />
 
+        {/* 비밀번호 입력 */}
         <input
           type="password"
           placeholder="비밀번호"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={{
-            width: "90%",
+            width: "100%",
             padding: "12px",
             marginBottom: "1.5rem",
             borderRadius: "8px",
@@ -114,9 +124,11 @@ const Login: React.FC = () => {
             backgroundColor: "#fff",
             outline: "none",
             color: "#333",
+            boxSizing: "border-box",
           }}
         />
 
+        {/* 로그인 버튼 */}
         <button
           style={{
             width: "100%",
@@ -134,6 +146,7 @@ const Login: React.FC = () => {
           로그인하기
         </button>
 
+        {/* 회원가입 버튼 */}
         <button
           style={{
             width: "100%",

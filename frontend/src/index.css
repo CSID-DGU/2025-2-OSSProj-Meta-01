@@ -76,3 +76,27 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* 모바일 전용 반응형 설정 */
+@media (max-width: 480px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+@media (max-width: 360px) {
+  html,
+  body,
+  #root {
+    padding: 0 12px;
+  }
+}
