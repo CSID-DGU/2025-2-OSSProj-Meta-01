@@ -6,19 +6,25 @@ const SignupStep2: React.FC = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
 
-  console.log("STEP2 state:", state);
-
   const [agree, setAgree] = useState(false);
   const [channel, setChannel] = useState("");
   const [university, setUniversity] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // 필드 검증 로직 수정
   const validateFields = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!channel.trim()) newErrors.channel = "알림 수신 채널을 선택해주세요.";
-    if (!university.trim()) newErrors.university = "대학교를 선택해주세요.";
+    // 알림 수신 동의한 경우에만 채널 필수
+    if (agree && !channel.trim()) {
+      newErrors.channel = "알림 수신 채널을 선택해주세요.";
+    }
+
+    // 대학은 항상 필수
+    if (!university.trim()) {
+      newErrors.university = "대학교를 선택해주세요.";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -44,7 +50,7 @@ const SignupStep2: React.FC = () => {
       gpa: state.gpa,
       income_level: state.income_level,
       receive_notifications: agree,
-      notification_channel: channel,
+      notification_channel: agree ? channel : null,
       university: university,
     };
 
@@ -61,13 +67,15 @@ const SignupStep2: React.FC = () => {
         alert("회원가입이 완료되었습니다!");
         navigate("/login");
       } else {
-        alert(JSON.stringify(data) || "회원가입에 실패했습니다.");
+        const messages = Object.values(data).flat().join("\n");
+        alert(messages || "회원가입에 실패했습니다.");
       }
     } catch (error) {
       alert("서버와 연결할 수 없습니다.");
     }
   };
 
+  // 동적으로 border 에러 색
   const selectWithError = (field: string) => ({
     ...selectStyle,
     border: errors[field] ? "1px solid red" : "1px solid #ccc",
@@ -88,40 +96,61 @@ const SignupStep2: React.FC = () => {
         />
         <h2 style={{ marginBottom: "1.5rem", color: "#333" }}>회원가입</h2>
 
+        {/* 알림 동의 체크 */}
         <div style={{ marginBottom: "1.5rem", textAlign: "left" }}>
           <label style={{ fontSize: "0.9rem", color: "#333" }}>
             <input
               type="checkbox"
               checked={agree}
-              onChange={(e) => setAgree(e.target.checked)}
+              onChange={(e) => {
+                setAgree(e.target.checked);
+
+                // 체크 해제 시 채널 필수 아님 → 기존 에러 제거
+                if (!e.target.checked) {
+                  setErrors((prev) => {
+                    const copy = { ...prev };
+                    delete copy.channel;
+                    return copy;
+                  });
+                }
+              }}
               style={{ marginRight: "8px" }}
             />
             선택 | 알림 수신에 동의합니다.
           </label>
         </div>
 
+        {/* 알림 수신 채널 (조건부 필수) */}
         <label style={labelStyle}>
-          <span style={required}>필수</span> 알림 수신 채널
+          {agree && <span style={required}>필수</span>}
+          알림 수신 채널
         </label>
+
         <select
-          value={channel}
+          value={agree ? channel : ""}
+          disabled={!agree}
           onChange={(e) => {
             setChannel(e.target.value);
             setErrors((prev) => ({ ...prev, channel: "" }));
           }}
           style={{
             ...selectWithError("channel"),
-            color: channel ? "#333" : "#888",
+            backgroundColor: !agree ? "#f5f5f5" : "#fff",
+            color: !agree ? "#bbb" : channel ? "#333" : "#888",
           }}
         >
           <option value="">채널을 선택하세요</option>
           <option value="sms">문자</option>
         </select>
-        {errors.channel && <p style={errorText}>{errors.channel}</p>}
 
+        {/* 동의했을 때만 에러 표시 */}
+        {agree && errors.channel && <p style={errorText}>{errors.channel}</p>}
+
+        {/* 대학교 선택 (항상 필수) */}
         <label style={labelStyle}>
           <span style={required}>필수</span> 대학교 선택
         </label>
+
         <select
           value={university}
           onChange={(e) => {
@@ -180,6 +209,7 @@ const SignupStep2: React.FC = () => {
   );
 };
 
+/* 스타일 */
 const containerStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "center",

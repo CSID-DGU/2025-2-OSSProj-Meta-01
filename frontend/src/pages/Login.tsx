@@ -29,7 +29,7 @@ const Login: React.FC = () => {
         alert("로그인 성공!");
         navigate("/main", { replace: true });
       } else {
-        alert(data.detail || "로그인 실패. 아이디/비밀번호를 확인하세요.");
+        alert(data.error?.[0] || "로그인 실패. 아이디/비밀번호를 확인하세요.");
       }
     } catch (error) {
       alert("서버 연결에 문제가 발생했습니다.");

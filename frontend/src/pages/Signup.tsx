@@ -108,7 +108,6 @@ const Signup: React.FC = () => {
         newErrors.gpa = "학점은 0~4.50 사이여야 합니다.";
     }
 
-    // 🔥 추가된 부분: 소득분위 필수 처리
     if (!incomeLevel.trim()) newErrors.incomeLevel = "소득분위를 선택해주세요.";
 
     setErrors(newErrors);
@@ -132,7 +131,7 @@ const Signup: React.FC = () => {
       major: Number(major),
       year,
       gpa: Number(gpa),
-      income_level: incomeLevel, // 🔥 필수값이라 조건문 제거
+      income_level: incomeLevel,
     };
 
     navigate("/signup-step2", { state: signupData });
@@ -271,7 +270,6 @@ const Signup: React.FC = () => {
           />
           {errors.gpa && <p style={errorText}>{errors.gpa}</p>}
 
-          {/* 소득분위 영역 */}
           <select
             value={incomeLevel}
             onChange={(e) => {
