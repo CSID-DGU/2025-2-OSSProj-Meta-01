@@ -38,7 +38,7 @@ type Scholarship = {
 
 const Main: React.FC = () => {
   const navigate = useNavigate();
-  const { count } = useBadge();
+  const { count, refreshCount } = useBadge();
 
   // 학사공지 상태
   const [topNotices, setTopNotices] = useState<Notice[]>([]);
@@ -80,6 +80,7 @@ const Main: React.FC = () => {
         setNoticeLoading(false);
       }
     })();
+    refreshCount();
   }, []);
 
   // 장학금 공지 미리보기 불러오기

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import logo from "../images/logo.png";
@@ -28,17 +28,17 @@ const NotificationCenter: React.FC = () => {
 
   const { setCount } = useBadge();
 
-  // 페이지 진입 시 배지 0으로 초기화
+  // 페이지 진입 시 배지 초기화
   useEffect(() => {
     setCount(0);
   }, [setCount]);
 
-  // 모든 북마크 알림 조회
+  // 알림 데이터 불러오기
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem("accessToken");
 
-      // 1) 캘린더에서 전체 bookmark_id 목록 가져오기
+      // 캘린더에서 bookmark_id 목록 먼저 가져오기
       const calRes = await fetch(
         "http://127.0.0.1:8000/notification/calendar/",
         {
@@ -52,8 +52,6 @@ const NotificationCenter: React.FC = () => {
       if (!calRes.ok) throw new Error("캘린더 조회 실패");
 
       const calendarItems: CalendarItem[] = await calRes.json();
-
-      // bookmark_id 배열
       const bookmarkIds = calendarItems.map((item) => item.bookmark_id);
 
       if (bookmarkIds.length === 0) {
@@ -61,8 +59,8 @@ const NotificationCenter: React.FC = () => {
         return;
       }
 
-      // 2) 각 bookmark_id에 대해 알림 조회
-      const allNotifications: NotificationItem[] = [];
+      // 각 bookmark_id에 대한 실제 알림 조회
+      const all: NotificationItem[] = [];
 
       for (const id of bookmarkIds) {
         const res = await fetch(
@@ -77,29 +75,29 @@ const NotificationCenter: React.FC = () => {
 
         if (!res.ok) continue;
 
-        const notiList: NotificationItem[] = await res.json();
+        const notiList = await res.json();
 
-        // bookmark_id 추가
-        const enriched = notiList.map((n) => ({
+        const enriched = notiList.map((n: NotificationItem) => ({
           ...n,
           bookmark_id: id,
         }));
 
-        allNotifications.push(...enriched);
+        all.push(...enriched);
       }
 
-      // 최신 알림 → 오래된 알림 순 정렬 (선택)
-      allNotifications.sort(
+      // 최신 순으로 정렬
+      all.sort(
         (a, b) =>
           new Date(b.end_date).getTime() - new Date(a.end_date).getTime()
       );
 
-      setNotifications(allNotifications);
+      setNotifications(all);
     } catch (e) {
       console.error("알림 불러오기 실패:", e);
     }
   };
 
+  // 알림 삭제
   const deleteNotification = async (id: number) => {
     try {
       const token = localStorage.getItem("accessToken");
@@ -119,7 +117,6 @@ const NotificationCenter: React.FC = () => {
 
       await res.json();
 
-      // 삭제된 알림만 즉시 제거
       setNotifications((prev) => prev.filter((n) => n.notification_id !== id));
     } catch (e) {
       console.error("알림 삭제 실패:", e);
@@ -130,33 +127,10 @@ const NotificationCenter: React.FC = () => {
     fetchNotifications();
   }, []);
 
-  // 날짜 그룹핑
-  const grouped = useMemo(() => {
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(today.getDate() - 1);
-
-    const tKey = today.toISOString().split("T")[0];
-    const yKey = yesterday.toISOString().split("T")[0];
-
-    const groups: Record<string, NotificationItem[]> = {
-      오늘: [],
-      어제: [],
-      이전: [],
-    };
-
-    notifications.forEach((n) => {
-      if (n.end_date === tKey) groups["오늘"].push(n);
-      else if (n.end_date === yKey) groups["어제"].push(n);
-      else groups["이전"].push(n);
-    });
-
-    return groups;
-  }, [notifications]);
-
   return (
     <>
       <div style={container}>
+        {/* 헤더 */}
         <header style={headerStyle}>
           <img
             src={arrowIcon}
@@ -169,37 +143,40 @@ const NotificationCenter: React.FC = () => {
 
         <h2 style={title}>알림 센터</h2>
 
-        {Object.entries(grouped).map(([label, list]) =>
-          list.length > 0 ? (
-            <section key={label} style={sectionCard}>
-              <h3 style={sectionTitle}>{label}</h3>
+        {/* 알림 정책 설명 */}
+        <p style={tip}>
+          내가 추가한 알림(D-n)만 저장돼요. 기본 제공되는 D-1 알림은 자동
+          발송되지만 기록되지 않아요.
+        </p>
 
-              {list.map((n) => (
-                <div key={n.notification_id} style={card}>
-                  <div style={cardHeader}>
-                    <div style={{ fontSize: 15, fontWeight: "600" }}>
-                      {n.scholarship_name}
-                    </div>
+        {/* 리스트 */}
+        <section style={sectionCard}>
+          <h3 style={sectionTitle}>설정된 알림</h3>
 
-                    <button
-                      onClick={() => deleteNotification(n.notification_id)}
-                      style={deleteBtn}
-                    >
-                      ✕
-                    </button>
-                  </div>
+          {notifications.length === 0 && (
+            <div style={empty}>설정된 알림이 없습니다.</div>
+          )}
 
-                  <div style={date}>마감일: {n.end_date}</div>
-                  <div style={date}>알림 예정: D-{n.notification_date}</div>
+          {notifications.map((n) => (
+            <div key={n.notification_id} style={card}>
+              <div style={cardHeader}>
+                <div style={{ fontSize: 15, fontWeight: "600" }}>
+                  {n.scholarship_name}
                 </div>
-              ))}
-            </section>
-          ) : null
-        )}
 
-        {notifications.length === 0 && (
-          <div style={empty}>새로운 알림이 없습니다.</div>
-        )}
+                <button
+                  style={deleteBtn}
+                  onClick={() => deleteNotification(n.notification_id)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={date}>마감일: {n.end_date}</div>
+              <div style={date}>알림 예정: D-{n.notification_date}</div>
+            </div>
+          ))}
+        </section>
       </div>
 
       <BottomNav />
@@ -248,7 +225,14 @@ const logoStyle: React.CSSProperties = {
 const title: React.CSSProperties = {
   fontSize: 18,
   fontWeight: 600,
-  marginBottom: "1rem",
+  marginBottom: "0.5rem",
+};
+
+const tip: React.CSSProperties = {
+  fontSize: 13,
+  color: "#666",
+  marginBottom: "1.2rem",
+  lineHeight: 1.4,
 };
 
 const sectionCard: React.CSSProperties = {
@@ -256,21 +240,19 @@ const sectionCard: React.CSSProperties = {
   borderRadius: 16,
   boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
   padding: "16px 18px",
-  marginBottom: "1.5rem",
 };
 
 const sectionTitle: React.CSSProperties = {
   fontSize: 15,
   fontWeight: 700,
   marginBottom: 14,
-  color: "#111",
 };
 
 const card: React.CSSProperties = {
   background: "#fafafa",
   borderRadius: 10,
-  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
   padding: "12px 14px",
+  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
   marginBottom: "10px",
 };
 
@@ -297,7 +279,7 @@ const date: React.CSSProperties = {
 const empty: React.CSSProperties = {
   textAlign: "center",
   color: "#666",
-  marginTop: 40,
+  marginTop: 20,
 };
 
 export default NotificationCenter;
