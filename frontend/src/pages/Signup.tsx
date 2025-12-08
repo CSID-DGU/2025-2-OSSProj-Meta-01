@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../images/metalogo.png";
+import "./Signup.css";
 
 export const majorOptions = [
   { major_id: 1, major_name: "불교학과" },

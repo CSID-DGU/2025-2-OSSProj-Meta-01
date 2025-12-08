@@ -6,6 +6,7 @@ import arrowIcon from "../images/Arrow.png";
 import { apiRequest } from "../api/apiClient";
 import { useBookmark } from "../contexts/BookmarkContext";
 import { toast } from "react-hot-toast";
+import "./Profile.css";
 
 export const majorOptions = [
   { major_id: 1, major_name: "불교학과" },
@@ -493,11 +494,11 @@ const ProfilePage: React.FC = () => {
         </header>
 
         {/* 내 정보 */}
-        <section style={card}>
+        <section className="profile-card" style={card}>
           <h3 style={sectionTitle}>내 정보</h3>
 
           {editInfo ? (
-            <div style={formWrap}>
+            <div className="profile-grid" style={formWrap}>
               {/* 이름 (수정 불가) */}
               <ReadOnlyRow label="이름" value={form.name} />
 
@@ -582,7 +583,7 @@ const ProfilePage: React.FC = () => {
               </label>
             </div>
           ) : (
-            <div style={formWrap}>
+            <div className="profile-grid" style={formWrap}>
               <ReadOnlyRow label="이름" value={form.name} />
               <ReadOnlyRow
                 label="학과"
@@ -620,7 +621,7 @@ const ProfilePage: React.FC = () => {
         </section>
 
         {/* 관심 키워드 */}
-        <section style={card}>
+        <section className="profile-card" style={card}>
           <h3 style={sectionTitle}>내 관심 키워드</h3>
           <div
             style={{
@@ -668,7 +669,7 @@ const ProfilePage: React.FC = () => {
         </section>
 
         {/* 자격증 목록 */}
-        <section style={card}>
+        <section className="profile-card" style={card}>
           <h3 style={sectionTitle}>내 자격증/어학성적</h3>
 
           <div style={certList}>
@@ -698,7 +699,7 @@ const ProfilePage: React.FC = () => {
         </section>
 
         {/* 북마크 목록 */}
-        <section style={card}>
+        <section className="profile-card" style={card}>
           <div style={sectionTop}>
             <h3 style={sectionTitle}>북마크 관리</h3>
             <span style={badge}>장학금 {bookmarkRows.length}건</span>
@@ -753,7 +754,7 @@ const ProfilePage: React.FC = () => {
         </section>
 
         {/* 계정 */}
-        <section style={card}>
+        <section className="profile-card" style={card}>
           <h3 style={sectionTitle}>계정</h3>
 
           <div

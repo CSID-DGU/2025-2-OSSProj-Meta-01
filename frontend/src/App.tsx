@@ -21,13 +21,21 @@ const App: React.FC = () => {
         justifyContent: "center",
         alignItems: "center",
         height: "100vh",
+        width: "100%",
+        padding: "0 20px",
+        boxSizing: "border-box",
         backgroundColor: "#ffffff",
       }}
     >
       <img
         src={logo}
         alt="DMETA logo"
-        style={{ width: "180px", marginBottom: "1rem" }}
+        style={{
+          width: "40%",
+          maxWidth: "180px",
+          minWidth: "120px",
+          marginBottom: "1rem",
+        }}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
+import "./Main.css";
 
 import logo from "../images/metalogo.png";
 import notification from "../images/notification.png";
@@ -208,6 +209,7 @@ const Main: React.FC = () => {
       <section style={bannerSectionStyle}>
         <div style={bannerWrapperStyle}>
           <img
+            className="main-banner"
             src={banners[currentBanner]}
             alt="배너"
             style={bannerImageStyle}
