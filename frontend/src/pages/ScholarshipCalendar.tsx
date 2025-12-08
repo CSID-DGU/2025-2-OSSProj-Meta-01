@@ -5,6 +5,7 @@ import logo from "../images/logo.png";
 import arrowIcon from "../images/Arrow.png";
 import { useBookmark } from "../contexts/BookmarkContext";
 import { useBadge } from "../contexts/BadgeContext";
+import { toast } from "react-hot-toast";
 
 type CalendarItem = {
   bookmark_id: number;
@@ -61,7 +62,6 @@ export default function ScholarshipCalendar() {
     CalendarItem[] | null
   >(null);
 
-  // 알림 정보를 bookmark_id 별로 저장
   const [notificationsMap, setNotificationsMap] = useState<
     Record<number, NotificationItem[]>
   >({});
@@ -87,6 +87,7 @@ export default function ScholarshipCalendar() {
         setCalendarItems(list);
       } catch (e) {
         console.error("캘린더 불러오기 실패:", e);
+        toast.error("캘린더 정보를 불러오지 못했습니다.");
       }
     };
 
@@ -118,6 +119,7 @@ export default function ScholarshipCalendar() {
         }));
       } catch (err) {
         console.log("알림 불러오기 실패", err);
+        toast.error("알림 정보를 불러오지 못했습니다.");
       }
     });
   }, [calendarItems]);
@@ -133,11 +135,9 @@ export default function ScholarshipCalendar() {
   }, [calendarItems]);
 
   const grid = useMemo(() => buildMonthGrid(month), [month]);
-
   const monthLabel = `${month.getFullYear()}년 ${String(
     month.getMonth() + 1
   ).padStart(2, "0")}월`;
-
   const thisMonth = month.getMonth();
 
   const sortedItems = useMemo(() => {
@@ -177,10 +177,11 @@ export default function ScholarshipCalendar() {
         setCount((prev) => prev + 1);
       }
 
-      alert(`알림 D-${daysBefore}이 설정되었습니다.`);
+      toast.success(`D-${daysBefore} 알림이 설정되었습니다.`);
       setShowDropdownFor(null);
     } catch (err) {
       console.log("알림 추가 실패", err);
+      toast.error("알림 설정에 실패했습니다.");
     }
   };
 
@@ -213,9 +214,10 @@ export default function ScholarshipCalendar() {
         setCount((prev) => Math.max(prev - 1, 0));
       }
 
-      alert("알림이 삭제되었습니다.");
+      toast.success("알림이 삭제되었습니다.");
     } catch (err) {
       console.log("알림 삭제 실패", err);
+      toast.error("알림 삭제에 실패했습니다.");
     }
   };
 
@@ -286,6 +288,7 @@ export default function ScholarshipCalendar() {
                     {d.getDate()}
                   </div>
 
+                  {/* 점 표시 */}
                   <div
                     style={{
                       display: "flex",
@@ -319,7 +322,7 @@ export default function ScholarshipCalendar() {
           </div>
         </div>
 
-        {/* 리스트 */}
+        {/* 리스트 영역 */}
         <section
           style={{
             background: "white",
@@ -344,7 +347,6 @@ export default function ScholarshipCalendar() {
                     (1000 * 60 * 60 * 24)
                 );
                 const isExpired = diffDays < 0;
-
                 const dayOptions = Array.from(
                   { length: Math.min(diffDays, 10) },
                   (_, i) => i + 1
@@ -395,6 +397,7 @@ export default function ScholarshipCalendar() {
                                 item.scholarship_id !== it.scholarship_id
                             )
                           );
+                          toast.success("북마크가 해제되었습니다.");
                         }}
                       >
                         북마크 해제
@@ -515,7 +518,6 @@ export default function ScholarshipCalendar() {
 }
 
 /* 스타일 */
-
 const containerStyle: React.CSSProperties = {
   maxWidth: "500px",
   margin: "0 auto",

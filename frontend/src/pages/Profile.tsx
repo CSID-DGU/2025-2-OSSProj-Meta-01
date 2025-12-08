@@ -5,6 +5,7 @@ import logo from "../images/logo.png";
 import arrowIcon from "../images/Arrow.png";
 import { apiRequest } from "../api/apiClient";
 import { useBookmark } from "../contexts/BookmarkContext";
+import { toast } from "react-hot-toast";
 
 export const majorOptions = [
   { major_id: 1, major_name: "불교학과" },
@@ -310,13 +311,13 @@ const ProfilePage: React.FC = () => {
     });
 
     if (res.ok) {
-      alert("개인정보가 저장되었습니다.");
+      toast.success("개인정보가 저장되었습니다.");
       setEditInfo(false);
       loadMyInfo();
     } else {
       const errorData = await res.json();
       console.log("PATCH ERROR:", errorData);
-      alert("저장 실패: " + JSON.stringify(errorData));
+      toast.error("저장 실패: " + JSON.stringify(errorData));
     }
   };
 
@@ -330,7 +331,7 @@ const ProfilePage: React.FC = () => {
     const data = await res.json();
 
     if (res.ok) {
-      alert("비밀번호가 변경되었습니다.");
+      toast.success("비밀번호가 변경되었습니다.");
       setPwForm({ old_password: "", new_password1: "", new_password2: "" });
     } else {
       const detail = data.details;
@@ -341,7 +342,7 @@ const ProfilePage: React.FC = () => {
         detail?.error?.[0] ||
         data.error ||
         "비밀번호 변경 실패";
-      alert(msg);
+      toast.error(msg);
     }
   };
 
@@ -381,10 +382,10 @@ const ProfilePage: React.FC = () => {
 
       await loadKeywords();
       setEditingKeywords(false);
-      alert("관심 키워드가 저장되었습니다.");
+      toast.success("관심 키워드가 저장되었습니다.");
     } catch (e) {
       console.error(e);
-      alert("관심 키워드 저장 중 오류가 발생했습니다.");
+      toast.error("관심 키워드 저장 중 오류가 발생했습니다.");
     }
   };
 
@@ -406,11 +407,11 @@ const ProfilePage: React.FC = () => {
     const data = await res.json();
 
     if (res.ok) {
-      alert("자격증이 추가되었습니다.");
+      toast.success("자격증이 추가되었습니다.");
       setAddModalOpen(false);
       loadUserCerts();
     } else {
-      alert(data.error || "추가 실패");
+      toast.error(data.error || "추가 실패");
     }
   };
 
@@ -433,11 +434,11 @@ const ProfilePage: React.FC = () => {
     const data = await res.json();
 
     if (res.ok) {
-      alert("수정되었습니다.");
+      toast.success("수정되었습니다.");
       setEditModalOpen(false);
       loadUserCerts();
     } else {
-      alert(data.error || "수정 실패");
+      toast.error(data.error || "수정 실패");
     }
   };
 
@@ -452,11 +453,11 @@ const ProfilePage: React.FC = () => {
     const data = await res.json();
 
     if (res.ok) {
-      alert("삭제되었습니다.");
+      toast.success("삭제되었습니다.");
       setEditModalOpen(false);
       loadUserCerts();
     } else {
-      alert(data.error || "삭제 실패");
+      toast.error(data.error || "삭제 실패");
     }
   };
 

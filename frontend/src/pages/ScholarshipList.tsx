@@ -6,6 +6,7 @@ import bookmarkIcon from "../images/bookmark.png";
 import bookmarkFilledIcon from "../images/bookmark_filled.png";
 import arrowIcon from "../images/Arrow.png";
 import { useBookmark } from "../contexts/BookmarkContext";
+import { toast } from "react-hot-toast";
 
 const ALL_KEYWORDS = [
   "교내장학",
@@ -64,7 +65,6 @@ const ScholarshipList: React.FC = () => {
 
       const userKeywords = await res.json();
 
-      // ALL_KEYWORDS 기준으로 active 처리
       const merged = ALL_KEYWORDS.map((k) => ({
         name: k,
         active: userKeywords.some((uk: any) => uk.keyword === k),
@@ -120,7 +120,7 @@ const ScholarshipList: React.FC = () => {
     }
   };
 
-  /* 페이지 첫 로드 → 키워드 + 장학금 데이터 모두 로드 */
+  /* 페이지 첫 로드 */
   useEffect(() => {
     loadUserKeywords();
     loadScholarships();
@@ -154,7 +154,7 @@ const ScholarshipList: React.FC = () => {
     });
   };
 
-  /* UI 렌더링  */
+  /* UI 렌더링 */
   return (
     <>
       <div style={container}>
@@ -173,10 +173,7 @@ const ScholarshipList: React.FC = () => {
         {/* 키워드 토글 */}
         <div style={keywordToggleWrap}>
           <button
-            onClick={() => {
-              const willOpen = !showKeywords;
-              setShowKeywords(willOpen);
-            }}
+            onClick={() => setShowKeywords(!showKeywords)}
             style={keywordToggleBtn}
           >
             {showKeywords ? "관심키워드 숨기기 ▲" : "관심키워드 보기 ▼"}
@@ -246,6 +243,12 @@ const ScholarshipList: React.FC = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleBookmark(s.id);
+
+                          toast.success(
+                            isBookmarked
+                              ? "북마크가 해제되었습니다"
+                              : "북마크에 저장되었습니다"
+                          );
                         }}
                       />
                     </div>

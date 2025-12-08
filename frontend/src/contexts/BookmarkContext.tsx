@@ -56,7 +56,7 @@ export const BookmarkProvider: React.FC<{ children: React.ReactNode }> = ({
     loadInitialBookmarks();
   }, []);
 
-  /* 북마크 토글  */
+  /* 북마크 토글 */
   const toggleBookmark = async (scholarshipId: number) => {
     const token = localStorage.getItem("accessToken");
 
@@ -72,14 +72,11 @@ export const BookmarkProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
 
+      // 서버 메시지는 toast로 페이지 단에서 처리하므로 여기서는 UI 처리 없음
       let data = {};
       try {
         data = await res.json();
       } catch {}
-
-      if ((data as any)?.message) {
-        alert((data as any).message);
-      }
 
       setBookmarks((prev) => {
         const updated = prev.includes(scholarshipId)
@@ -91,12 +88,11 @@ export const BookmarkProvider: React.FC<{ children: React.ReactNode }> = ({
         return updated;
       });
     } catch (e) {
-      alert("북마크 처리 중 오류 발생");
-      console.error(e);
+      console.error("북마크 처리 중 오류:", e);
     }
   };
 
-  /* 북마크 삭제  */
+  /* 북마크 삭제 (마이페이지에서 사용) */
   const removeBookmarkById = async (
     bookmarkId: number,
     scholarshipId: number
@@ -115,12 +111,11 @@ export const BookmarkProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
 
+      // 여기서도 UI 메시지 제거
       let data = {};
       try {
         data = await res.json();
       } catch {}
-
-      alert((data as any)?.message || "북마크가 삭제되었습니다.");
 
       // 상태 동기화
       setBookmarks((prev) => {
@@ -130,8 +125,7 @@ export const BookmarkProvider: React.FC<{ children: React.ReactNode }> = ({
         return updated;
       });
     } catch (e) {
-      alert("북마크 삭제 중 오류 발생");
-      console.error(e);
+      console.error("북마크 삭제 중 오류:", e);
     }
   };
 

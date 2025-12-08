@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../images/logo.png";
+import { toast } from "react-hot-toast";
 
 const SignupStep2: React.FC = () => {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ const SignupStep2: React.FC = () => {
 
   const handleSignup = async () => {
     if (!state) {
-      alert("회원가입 정보가 누락되었습니다. 처음부터 다시 입력해주세요.");
+      toast.error("회원가입 정보가 누락되었습니다. 다시 진행해주세요.");
       navigate("/signup");
       return;
     }
@@ -64,14 +65,14 @@ const SignupStep2: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert("회원가입이 완료되었습니다!");
+        toast.success("회원가입이 완료되었습니다!");
         navigate("/login");
       } else {
         const messages = Object.values(data).flat().join("\n");
-        alert(messages || "회원가입에 실패했습니다.");
+        toast.error(messages || "회원가입에 실패했습니다.");
       }
     } catch (error) {
-      alert("서버와 연결할 수 없습니다.");
+      toast.error("서버와 연결할 수 없습니다.");
     }
   };
 

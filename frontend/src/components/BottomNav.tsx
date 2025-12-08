@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 
 import homeIcon from "../images/free-icon-home.png";
 import calendarIcon from "../images/free-icon-weekly-calendar-outline-event-interface-symbol.png";
@@ -32,6 +33,8 @@ export default function BottomNav() {
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+
+    toast.success("로그아웃 되었습니다.");
     navigate("/login", { replace: true });
   };
 

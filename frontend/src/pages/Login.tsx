@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../images/logo.png";
+import toast from "react-hot-toast";
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -26,13 +27,15 @@ const Login: React.FC = () => {
         localStorage.setItem("accessToken", data.access);
         localStorage.setItem("refreshToken", data.refresh);
 
-        alert("로그인 성공!");
+        toast.success("로그인 성공!");
         navigate("/main", { replace: true });
       } else {
-        alert(data.error?.[0] || "로그인 실패. 아이디/비밀번호를 확인하세요.");
+        toast.error(
+          data.error?.[0] || "로그인 실패. 아이디/비밀번호를 확인하세요."
+        );
       }
     } catch (error) {
-      alert("서버 연결에 문제가 발생했습니다.");
+      toast.error("서버 연결에 문제가 발생했습니다.");
     }
   };
 

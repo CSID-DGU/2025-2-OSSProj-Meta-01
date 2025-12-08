@@ -6,6 +6,7 @@ import bookmarkIcon from "../images/bookmark.png";
 import bookmarkFilledIcon from "../images/bookmark_filled.png";
 import arrowIcon from "../images/Arrow.png";
 import { useBookmark } from "../contexts/BookmarkContext";
+import { toast } from "react-hot-toast";
 
 type ScholarshipDetailResponse = {
   scholarship_id: number;
@@ -65,6 +66,7 @@ const ScholarshipDetail: React.FC = () => {
         });
 
         if (!res.ok) {
+          toast.error("장학금 상세 정보를 불러오지 못했습니다.");
           setItem(null);
           setLoading(false);
           return;
@@ -73,6 +75,7 @@ const ScholarshipDetail: React.FC = () => {
         const data: ScholarshipDetailResponse = await res.json();
         setItem(data);
       } catch {
+        toast.error("서버와 연결할 수 없습니다.");
         setItem(null);
       } finally {
         setLoading(false);
@@ -81,7 +84,24 @@ const ScholarshipDetail: React.FC = () => {
   }, [id]);
 
   if (loading) return <div style={container}>불러오는 중…</div>;
-  if (!item) return <div style={container}>존재하지 않는 장학금입니다.</div>;
+  if (!item)
+    return (
+      <div style={container}>
+        <p style={{ marginBottom: 12 }}>장학금 정보를 불러올 수 없습니다.</p>
+        <button
+          style={{
+            padding: "10px 14px",
+            borderRadius: 8,
+            border: "1px solid #ddd",
+            background: "#fff",
+            cursor: "pointer",
+          }}
+          onClick={() => navigate(-1)}
+        >
+          ← 뒤로가기
+        </button>
+      </div>
+    );
 
   const dday = Math.ceil(
     (new Date(item.end_date).getTime() - Date.now()) / 86400000
@@ -164,6 +184,13 @@ const ScholarshipDetail: React.FC = () => {
             src={item.is_bookmarked ? bookmarkFilledIcon : bookmarkIcon}
             onClick={() => {
               toggleBookmark(item.scholarship_id);
+
+              toast.success(
+                item.is_bookmarked
+                  ? "북마크가 해제되었습니다"
+                  : "북마크에 저장되었습니다"
+              );
+
               setItem((prev) =>
                 prev ? { ...prev, is_bookmarked: !prev.is_bookmarked } : prev
               );
