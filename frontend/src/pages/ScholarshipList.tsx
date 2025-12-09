@@ -48,8 +48,10 @@ const ScholarshipList: React.FC = () => {
   const [showKeywords, setShowKeywords] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const navigate = useNavigate();
 
+  const [search, setSearch] = useState("");
+
+  const navigate = useNavigate();
   const { bookmarks, toggleBookmark } = useBookmark();
 
   /* 서버에서 내 관심 키워드 불러오기 */
@@ -120,13 +122,66 @@ const ScholarshipList: React.FC = () => {
     }
   };
 
-  /* 페이지 첫 로드 */
+  /* 검색 API 요청 */
+  const searchScholarships = async (query: string) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+
+      const res = await fetch(
+        `http://127.0.0.1:8000/scholarships/?search=${encodeURIComponent(
+          query
+        )}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!res.ok) throw new Error("검색 API 요청 실패");
+
+      const list = await res.json();
+
+      const converted: Scholarship[] = list.map((s: any) => {
+        const mainCategory = s.keywords?.[0]?.keyword ?? "장학";
+
+        return {
+          id: s.scholarship_id,
+          title: s.scholarship_name,
+          category: mainCategory,
+          deadline: s.end_date,
+          amount: undefined,
+          isBookmarked: s.is_bookmarked,
+          tags: s.keywords ? s.keywords.map((k: any) => k.keyword) : [],
+        };
+      });
+
+      setFiltered(converted);
+    } catch (e) {
+      console.error(e);
+      toast.error("검색 중 오류가 발생했습니다");
+    }
+  };
+
   useEffect(() => {
     loadUserKeywords();
     loadScholarships();
   }, []);
 
-  /* 키워드 필터링 */
+  useEffect(() => {
+    if (!search.trim()) {
+      setFiltered(data);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      searchScholarships(search);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const handleKeywordClick = (kw: string) => {
     setKeywords((prev) => {
       const updated = prev.map((k) =>
@@ -135,26 +190,33 @@ const ScholarshipList: React.FC = () => {
 
       const activeNames = updated.filter((k) => k.active).map((k) => k.name);
 
-      if (activeNames.length === 0) {
-        setFiltered(data);
-      } else {
-        setFiltered(
-          data.filter((s) =>
-            activeNames.some((sel) => {
-              if (["교내장학", "교외장학", "국가장학"].includes(sel)) {
-                return s.category === sel;
-              }
-              return s.tags.includes(sel);
-            })
-          )
-        );
+      if (search.trim()) {
+        return updated;
       }
+
+      if (activeNames.length === 0) {
+        if (!search.trim()) {
+          setFiltered(data);
+        }
+        return updated;
+      }
+
+      /* 관심 키워드 필터링 */
+      setFiltered(
+        data.filter((s) =>
+          activeNames.some((sel) => {
+            if (["교내장학", "교외장학", "국가장학"].includes(sel)) {
+              return s.category === sel;
+            }
+            return s.tags.includes(sel);
+          })
+        )
+      );
 
       return updated;
     });
   };
 
-  /* UI 렌더링 */
   return (
     <>
       <div style={container}>
@@ -169,6 +231,24 @@ const ScholarshipList: React.FC = () => {
         </header>
 
         <h2 style={title}>전체 장학금 리스트</h2>
+
+        {/* 검색 입력창 */}
+        <div style={{ margin: "10px 0" }}>
+          <input
+            type="text"
+            placeholder="검색어를 입력하세요"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: "10px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              fontSize: "14px",
+            }}
+          />
+        </div>
 
         {/* 키워드 토글 */}
         <div style={keywordToggleWrap}>
@@ -196,7 +276,6 @@ const ScholarshipList: React.FC = () => {
           )}
         </div>
 
-        {/* 펼친 키워드 */}
         {showKeywords && (
           <div style={keywordWrap}>
             {keywords.map((kw, i) => (
@@ -216,7 +295,7 @@ const ScholarshipList: React.FC = () => {
           </div>
         )}
 
-        {/* 장학금 리스트 */}
+        {/* 리스트 */}
         <section>
           {loading && <div>불러오는 중…</div>}
           {err && <div style={{ color: "tomato" }}>에러: {err}</div>}
@@ -317,7 +396,6 @@ const arrow: React.CSSProperties = {
   cursor: "pointer",
   opacity: 0.8,
 };
-
 const logoStyle: React.CSSProperties = { width: 120 };
 
 const title: React.CSSProperties = {
