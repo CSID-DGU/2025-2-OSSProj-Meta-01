@@ -73,3 +73,89 @@ class ScholarshipDocumentFetcher:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+    
+    def search_documents(self, keyword: str):
+        pipeline = [
+        {
+            "$project": {
+                "_id": 1,
+                "kv": {"$objectToArray": "$$ROOT"}
+            }
+        },
+        {
+            "$project": {
+                "_id": 1,
+                "fullText": {
+                    "$reduce": {
+                        "input": "$kv",
+                        "initialValue": "",
+                        "in": {
+                            "$concat": [
+                                "$$value",
+                                " ",
+                                {
+                                    "$switch": {
+                                        "branches": [
+                                            {
+                                                "case": { "$eq": [ { "$type": "$$this.v" }, "objectId" ] },
+                                                "then": ""
+                                            },
+                                            {
+                                                "case": { "$in": [ { "$type": "$$this.v" }, ["int", "long", "double"] ] },
+                                                "then": { "$toString": "$$this.v" }
+                                            },
+                                            {
+                                                "case": { "$eq": [ { "$type": "$$this.v" }, "bool" ] },
+                                                "then": { "$toString": "$$this.v" }
+                                            },
+                                            {
+                                                "case": { "$eq": [ { "$type": "$$this.v" }, "array" ] },
+                                                "then": {
+                                                    "$reduce": {
+                                                        "input": "$$this.v",
+                                                        "initialValue": "",
+                                                        "in": {
+                                                            "$concat": [
+                                                                "$$value",
+                                                                " ",
+                                                                {
+                                                                    "$cond": [
+                                                                        { "$eq": [ { "$type": "$$this" }, "string" ] },
+                                                                        "$$this",
+                                                                        ""
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                "case": { "$eq": [ { "$type": "$$this.v" }, "string" ] },
+                                                "then": "$$this.v"
+                                            }
+                                        ],
+                                        "default": ""
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "$match": {
+                "fullText": { "$regex": keyword, "$options": "i" }
+            }
+        }
+    ]
+
+        cursor = self.collection.aggregate(pipeline)
+
+        searched_id = []
+        for doc in cursor:
+            if "_id" in doc:
+                searched_id.append(str(doc["_id"]))
+
+        return searched_id

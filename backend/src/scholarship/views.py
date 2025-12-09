@@ -17,6 +17,22 @@ class ScholarshipListView(generics.ListAPIView):
         user = self.request.user
         today = date.today()
 
+        search_query = self.request.GET.get("search", "").strip()
+
+        if search_query:
+            with ScholarshipDocumentFetcher() as fetcher:
+                searched_id = fetcher.search_documents(search_query)
+
+            if not searched_id:
+                return []
+
+            scholarships = Scholarship.objects.filter(doc_id__in=searched_id)
+
+            future = scholarships.filter(end_date__gte=today).order_by("end_date")
+            past = scholarships.filter(end_date__lt=today).order_by("-end_date")
+
+            return list(future) + list(past)
+
         user_keywords = list(
             UserKeyword.objects.filter(user=user).values_list("keyword_id", flat=True)
         )
