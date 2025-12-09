@@ -79,7 +79,7 @@ sql_commands = [
         major_id INT NOT NULL,
         year ENUM('1','2','3','4','5','6') NOT NULL,
         gpa VARCHAR(10) NOT NULL,
-        income_level ENUM('1분위','2분위','3분위','4분위','5분위','6분위','7분위','8분위','9분위','10분위') NULL,
+        income_level ENUM('미입력','1분위','2분위','3분위','4분위','5분위','6분위','7분위','8분위','9분위','10분위') NULL,
         receive_notifications TINYINT(1) NOT NULL DEFAULT 0,
         PRIMARY KEY (user_id),
         CONSTRAINT FK_Majors_TO_Users FOREIGN KEY (major_id)
