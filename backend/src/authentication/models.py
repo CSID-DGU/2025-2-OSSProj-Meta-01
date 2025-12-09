@@ -24,8 +24,10 @@ class Major(models.Model):
 
 class User(models.Model):
     YEAR_CHOICES = [(str(i), str(i)) for i in range(1, 7)]
-    INCOME_CHOICES = [(f"{i}분위", f"{i}분위") for i in range(1, 11)]
-
+    INCOME_CHOICES = [
+        ('미입력', '미입력'),
+        *[(f"{i}분위", f"{i}분위") for i in range(1, 11)]
+    ]
     user_id = models.AutoField(primary_key=True)
     id = models.CharField(max_length=50, unique=True)
     password = models.CharField(max_length=100)
