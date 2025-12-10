@@ -93,10 +93,13 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     income_level = serializers.ChoiceField(
         choices=[
+            '미입력',
             '1분위', '2분위', '3분위', '4분위', '5분위',
             '6분위', '7분위', '8분위', '9분위', '10분위'
         ],
         required=False,
+        allow_blank=True,
+        allow_null=True,
         error_messages={
             "invalid_choice": "올바른 소득분위 형식이 아닙니다.",
         }
