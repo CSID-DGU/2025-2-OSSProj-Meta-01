@@ -309,7 +309,16 @@ const ScholarshipList: React.FC = () => {
                   <li key={s.id} style={itemCard}>
                     <div style={topRow}>
                       <div
-                        style={{ fontWeight: 700, flex: 1, cursor: "pointer" }}
+                        style={{
+                          fontWeight: 700,
+                          flex: 1,
+                          cursor: "pointer",
+                          paddingRight: "32px",
+                          overflow: "hidden",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}
                         onClick={() => navigate(`/scholarship/${s.id}`)}
                       >
                         {s.title}
@@ -318,7 +327,12 @@ const ScholarshipList: React.FC = () => {
                       <img
                         src={isBookmarked ? bookmarkFilledIcon : bookmarkIcon}
                         alt="bookmark"
-                        style={bookmarkIconStyle}
+                        style={{
+                          ...bookmarkIconStyle,
+                          position: "absolute",
+                          right: 14,
+                          top: 14,
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleBookmark(s.id);
@@ -396,6 +410,7 @@ const arrow: React.CSSProperties = {
   cursor: "pointer",
   opacity: 0.8,
 };
+
 const logoStyle: React.CSSProperties = { width: 120 };
 
 const title: React.CSSProperties = {
@@ -459,6 +474,7 @@ const itemCard: React.CSSProperties = {
   borderRadius: 14,
   padding: "14px",
   background: "#fff",
+  position: "relative",
 };
 
 const topRow: React.CSSProperties = {
