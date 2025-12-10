@@ -77,6 +77,7 @@ export const majorOptions = [
 const yearOptions = ["1", "2", "3", "4"];
 
 const incomeOptions = [
+  { label: "미입력", value: "미입력" },
   { label: "1분위", value: "1분위" },
   { label: "2분위", value: "2분위" },
   { label: "3분위", value: "3분위" },
@@ -306,7 +307,10 @@ const ProfilePage: React.FC = () => {
         major: Number(form.major),
         year: String(form.grade),
         gpa: form.gpa,
-        income_level: form.incomeLevel === "" ? null : form.incomeLevel,
+        income_level:
+          form.incomeLevel === "" || form.incomeLevel === "미입력"
+            ? "미입력"
+            : form.incomeLevel,
         receive_notifications: form.receiveNotifications,
       }),
     });

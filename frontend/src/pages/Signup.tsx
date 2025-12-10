@@ -287,6 +287,7 @@ const Signup: React.FC = () => {
             }}
           >
             <option value="">소득분위 선택</option>
+            <option value="미입력">미입력</option>
             <option value="1분위">1분위</option>
             <option value="2분위">2분위</option>
             <option value="3분위">3분위</option>
