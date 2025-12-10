@@ -487,6 +487,16 @@ const ProfilePage: React.FC = () => {
       .sort((a, b) => a.deadline.localeCompare(b.deadline));
   }, [userBookmarks]);
 
+  /* 회원탈퇴 */
+  const handleDeleteAccount = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+
+    toast.success("회원탈퇴 처리가 완료되었습니다.");
+
+    nav("/login", { replace: true });
+  };
+
   /* 렌더링 */
   return (
     <>
@@ -800,7 +810,9 @@ const ProfilePage: React.FC = () => {
             </button>
           </div>
 
-          <button style={logoutBtn}>회원탈퇴</button>
+          <button style={logoutBtn} onClick={handleDeleteAccount}>
+            회원탈퇴
+          </button>
         </section>
       </div>
 
