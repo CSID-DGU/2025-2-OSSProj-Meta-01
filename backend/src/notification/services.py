@@ -25,6 +25,7 @@ def send_sms(phone: str, text: str) -> dict:
             from_=SOLAPI_SENDER,
             to=phone,
             text=text,
+            subject="META 장학금 알림",
         )
 
         response = message_service.send(message)
