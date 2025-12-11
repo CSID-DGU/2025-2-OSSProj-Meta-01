@@ -23,8 +23,7 @@ def run_notification_job():
 
         if end_date - timedelta(days=1) == today:
             text = (
-                f"[장학금 알림]\n"
-                f"'{scholarship.scholarship_name}' 장학금 마감이 내일입니다.\n"
+                f"\n\n'{scholarship.scholarship_name}' 장학금 신청 마감이 내일입니다.\n\n"
                 f"(마감일: {end_date})"
             )
             send_sms(user.phone, text)
@@ -52,8 +51,7 @@ def run_notification_job():
 
         if notify_day == today:
             text = (
-                f"[장학금 알림]\n"
-                f"'{scholarship.scholarship_name}' 장학금 마감이 {d}일 남았습니다.\n"
+                f"\n\n'{scholarship.scholarship_name}' 장학금 신청 마감이 {d}일 남았습니다.\n\n"
                 f"(마감일: {end_date})"
             )
             send_sms(user.phone, text)
