@@ -116,7 +116,7 @@
 [최종보고서](/Docs/3_1_OSSProj_01_Meta_최종보고서.pdf)\
 [발표자료](/Docs/3_2_OSSProj_01_Meta_최종발표자료.pdf)\
 [회의록](/Docs/3_3_OSSProj_01_Meta_회의록.pdf)\
-[제품구성배포운영자료](/Docs/3_4_OSSProj_01_Meta_제품구성배포운영자료.pdf.pdf)\
+[제품구성배포운영자료](/Docs/3_4_OSSProj_01_Meta_제품구성배포운영자료.pdf)\
 [시연영상](/Docs/3_5_OSSProj_01_Meta_시연동영상.mp4)
 
 # 7. 이슈 관리
