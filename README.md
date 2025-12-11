@@ -83,6 +83,10 @@
 ![OSSProj_Service1](/Docs/img/Tnn_Meta_10_마이페이지1.png)
 ![OSSProj_Service1](/Docs/img/Tnn_Meta_11_마이페이지2.png)
 
+- 모바일 반응형 화면(주요화면)
+![OSSProj_Service1](/Docs/img/Tnn_Meta_1_m.png)
+![OSSProj_Service1](/Docs/img/Tnn_Meta_2_m.png)
+
 # 4. 기대효과
 ## 4-1) 학생 측면
 - 접근성 향상: 교내외 장학 정보를 한 플랫폼에서 확인할 수 있어, 여러 사이트를 오고가며 검색하던 시간과 노력을 절감할 수 있다. 
