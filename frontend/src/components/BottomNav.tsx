@@ -7,6 +7,8 @@ import calendarIcon from "../images/free-icon-weekly-calendar-outline-event-inte
 import userIcon from "../images/free-icon-user.png";
 import logoutIcon from "../images/free-icon-sign-out.png";
 
+import { useBookmark } from "../contexts/BookmarkContext";
+
 const footerStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-around",
@@ -29,8 +31,11 @@ const iconContainer: React.CSSProperties = {
 
 export default function BottomNav() {
   const navigate = useNavigate();
+  const { resetBookmarks } = useBookmark();
 
   const handleLogout = () => {
+    resetBookmarks();
+
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
 
