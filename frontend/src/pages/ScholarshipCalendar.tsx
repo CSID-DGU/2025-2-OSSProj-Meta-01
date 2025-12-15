@@ -306,6 +306,7 @@ export default function ScholarshipCalendar() {
                           borderRadius: 4,
                           background: "#F97316",
                           display: "inline-block",
+                          flexShrink: 0,
                         }}
                       />
                     ))}
@@ -363,6 +364,7 @@ export default function ScholarshipCalendar() {
                           height: 8,
                           borderRadius: 4,
                           background: "#F97316",
+                          flexShrink: 0,
                         }}
                       />
                       <strong style={{ fontSize: 15 }}>
@@ -627,6 +629,8 @@ const pillBtn: React.CSSProperties = {
   cursor: "pointer",
   color: "#111827",
   fontSize: 13,
+  whiteSpace: "nowrap",
+  flexShrink: 0,
 };
 
 const modalOverlayStyle: React.CSSProperties = {

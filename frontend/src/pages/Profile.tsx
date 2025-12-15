@@ -734,6 +734,7 @@ const ProfilePage: React.FC = () => {
                         height: 10,
                         borderRadius: "50%",
                         background: catColor(s!.category),
+                        flexShrink: 0,
                       }}
                     />
                     <div>
@@ -1226,6 +1227,8 @@ const miniBtn: React.CSSProperties = {
   background: "white",
   fontSize: 12,
   cursor: "pointer",
+  whiteSpace: "nowrap",
+  flexShrink: 0,
 };
 
 const addCert: React.CSSProperties = {
