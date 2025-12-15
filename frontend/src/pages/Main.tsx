@@ -222,17 +222,15 @@ const Main: React.FC = () => {
         <div style={recommendHeaderStyle}>추천 장학금</div>
 
         <div style={{ padding: "1rem", color: "#333" }}>
-          {recommendations.length === 0 && (
-            <p style={recommendDescStyle}>
-              조건에 맞는 장학금을 자동으로 추천합니다.
-            </p>
-          )}
-
           {recLoad && <div style={{ textAlign: "center" }}>불러오는 중…</div>}
 
           {!recLoad && !recErr && recommendations.length === 0 && (
             <div
-              style={{ textAlign: "center", padding: "20px 0", color: "#777" }}
+              style={{
+                textAlign: "center",
+                padding: "40px 0",
+                color: "#777",
+              }}
             >
               추천할 장학금이 아직 없습니다.
             </div>
