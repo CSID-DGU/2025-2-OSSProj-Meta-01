@@ -52,7 +52,7 @@ const ScholarshipList: React.FC = () => {
   const [search, setSearch] = useState("");
 
   const navigate = useNavigate();
-  const { bookmarks, toggleBookmark } = useBookmark();
+  const { toggleBookmark } = useBookmark();
 
   /* 서버에서 내 관심 키워드 불러오기 */
   const loadUserKeywords = async () => {
@@ -201,7 +201,6 @@ const ScholarshipList: React.FC = () => {
         return updated;
       }
 
-      /* 관심 키워드 필터링 */
       setFiltered(
         data.filter((s) =>
           activeNames.some((sel) => {
@@ -215,6 +214,21 @@ const ScholarshipList: React.FC = () => {
 
       return updated;
     });
+  };
+
+  /* 장학금 배열 내부에서 북마크 값 업데이트 */
+  const updateBookmarkState = (id: number) => {
+    setData((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, isBookmarked: !item.isBookmarked } : item
+      )
+    );
+
+    setFiltered((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, isBookmarked: !item.isBookmarked } : item
+      )
+    );
   };
 
   return (
@@ -303,7 +317,7 @@ const ScholarshipList: React.FC = () => {
           {!loading && !err && (
             <ul style={ulStyle}>
               {filtered.map((s) => {
-                const isBookmarked = bookmarks.includes(s.id);
+                const isBookmarked = s.isBookmarked;
 
                 return (
                   <li key={s.id} style={itemCard}>
@@ -333,9 +347,10 @@ const ScholarshipList: React.FC = () => {
                           right: 14,
                           top: 14,
                         }}
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
-                          toggleBookmark(s.id);
+                          await toggleBookmark(s.id);
+                          updateBookmarkState(s.id);
 
                           toast.success(
                             isBookmarked

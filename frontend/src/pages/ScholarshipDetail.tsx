@@ -55,32 +55,35 @@ const ScholarshipDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { toggleBookmark } = useBookmark();
 
-  /* 상세조회 */
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/scholarships/${id}/`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+  /* 상세 재조회 함수 */
+  const fetchDetail = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/scholarships/${id}/`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
 
-        if (!res.ok) {
-          toast.error("장학금 상세 정보를 불러오지 못했습니다.");
-          setItem(null);
-          setLoading(false);
-          return;
-        }
-
-        const data: ScholarshipDetailResponse = await res.json();
-        setItem(data);
-      } catch {
-        toast.error("서버와 연결할 수 없습니다.");
+      if (!res.ok) {
+        toast.error("장학금 상세 정보를 불러오지 못했습니다.");
         setItem(null);
-      } finally {
-        setLoading(false);
+        return;
       }
-    })();
+
+      const data: ScholarshipDetailResponse = await res.json();
+      setItem(data);
+    } catch {
+      toast.error("서버와 연결할 수 없습니다.");
+      setItem(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* 최초 데이터 로드 */
+  useEffect(() => {
+    fetchDetail();
   }, [id]);
 
   if (loading) return <div style={container}>불러오는 중…</div>;
@@ -182,17 +185,14 @@ const ScholarshipDetail: React.FC = () => {
           <h2 style={title}>{item.scholarship_name}</h2>
           <img
             src={item.is_bookmarked ? bookmarkFilledIcon : bookmarkIcon}
-            onClick={() => {
-              toggleBookmark(item.scholarship_id);
+            onClick={async () => {
+              await toggleBookmark(item.scholarship_id);
+              await fetchDetail();
 
               toast.success(
                 item.is_bookmarked
                   ? "북마크가 해제되었습니다"
                   : "북마크에 저장되었습니다"
-              );
-
-              setItem((prev) =>
-                prev ? { ...prev, is_bookmarked: !prev.is_bookmarked } : prev
               );
             }}
             alt="bookmark"
@@ -303,24 +303,6 @@ const ScholarshipDetail: React.FC = () => {
       </div>
 
       <BottomNav />
-
-      <style>
-        {`
-          .parsed-content-clean ul,
-          .parsed-content-clean li,
-          .parsed-content-clean ol {
-            list-style: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          .parsed-content-clean *::before,
-          .parsed-content-clean *::after {
-            content: none !important;
-            background: none !important;
-          }
-        `}
-      </style>
     </>
   );
 };
