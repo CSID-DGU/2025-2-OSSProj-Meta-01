@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import logo from "../images/metalogo.png";
 import arrowIcon from "../images/Arrow.png";
@@ -52,6 +52,7 @@ function buildMonthGrid(base: Date) {
 
 export default function ScholarshipCalendar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toggleBookmark } = useBookmark();
   const { setCount } = useBadge();
 
@@ -67,32 +68,29 @@ export default function ScholarshipCalendar() {
   >({});
 
   // 캘린더 데이터 호출
+  const fetchCalendar = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch("http://127.0.0.1:8000/notification/calendar/", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) throw new Error("캘린더 API 실패");
+
+      const list = await res.json();
+      setCalendarItems(list);
+    } catch (e) {
+      console.error("캘린더 불러오기 실패:", e);
+      toast.error("캘린더 정보를 불러오지 못했습니다.");
+    }
+  };
+
   useEffect(() => {
-    const fetchCalendar = async () => {
-      try {
-        const token = localStorage.getItem("accessToken");
-        const res = await fetch(
-          "http://127.0.0.1:8000/notification/calendar/",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!res.ok) throw new Error("캘린더 API 실패");
-
-        const list = await res.json();
-        setCalendarItems(list);
-      } catch (e) {
-        console.error("캘린더 불러오기 실패:", e);
-        toast.error("캘린더 정보를 불러오지 못했습니다.");
-      }
-    };
-
     fetchCalendar();
-  }, []);
+  }, [location.key]);
 
   // 각 bookmark_id 별로 알림 목록 불러오기
   useEffect(() => {
